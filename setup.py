@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 __version__ = "0.0.1"
 
 setup(
-    name='ilastik_profiler',
+    name='cell_paint_seg',
     version=__version__,
-    packages=['ilastik_profiler'],  
+    packages=['cell_paint_seg'],  
     author='Thomas Athey',
     author_email='tom.l.athey@gmail.com',
 
