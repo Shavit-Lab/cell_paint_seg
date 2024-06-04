@@ -17,6 +17,7 @@ setup(
         "pandas",
         "scipy",
         "matplotlib",
+        "ipython"
     ],
     license="MIT",
 )
