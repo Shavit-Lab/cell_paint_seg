@@ -8,6 +8,16 @@ setup(
     packages=["cell_paint_seg"],
     author="Thomas Athey",
     author_email="tom.l.athey@gmail.com",
-    install_requires=["h5py", "pillow", "numpy", "tqdm"],
+    install_requires=[
+        "h5py",
+        "pillow",
+        "numpy",
+        "tqdm",
+        "scikit-image",
+        "pandas",
+        "scipy",
+        "matplotlib",
+        "ipython",
+    ],
     license="MIT",
 )
