@@ -14,7 +14,20 @@ import pickle
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
-def eval_detections(path_dir_im, channels, path_dir_gt, path_dir_seg, out_dir, tag_gt = None, tag_seg = None, path_cp_stats_nuc = None, path_cp_stats_cell = None, cp_stat_limits = None, reg_stat_limits = None):
+
+def eval_detections(
+    path_dir_im,
+    channels,
+    path_dir_gt,
+    path_dir_seg,
+    out_dir,
+    tag_gt=None,
+    tag_seg=None,
+    path_cp_stats_nuc=None,
+    path_cp_stats_cell=None,
+    cp_stat_limits=None,
+    reg_stat_limits=None,
+):
     """Display predicted cell segmentations and ask for user classification to collect detection type data.
 
     Args:
@@ -52,34 +65,40 @@ def eval_detections(path_dir_im, channels, path_dir_gt, path_dir_seg, out_dir, t
 
         # filter based on stats
         if path_cp_stats_nuc:
-            regionprops_pred = cp_filter(id, regionprops_pred, path_cp_stats_nuc, path_cp_stats_cell, cp_stat_limits)
+            regionprops_pred = cp_filter(
+                id,
+                regionprops_pred,
+                path_cp_stats_nuc,
+                path_cp_stats_cell,
+                cp_stat_limits,
+            )
         if reg_stat_limits:
             regionprops_pred = reg_prop_filter(regionprops_pred, reg_stat_limits)
 
         for i, region in enumerate(regionprops_pred):
-            if i%10 == 0:
+            if i % 10 == 0:
                 print(f"{i}/{len(regionprops_pred)}")
 
-            sub_ims, border_masked, sub_gt_masked = get_viewing_images(images, seg_pred, seg_gt, region)
-
+            sub_ims, border_masked, sub_gt_masked = get_viewing_images(
+                images, seg_pred, seg_gt, region
+            )
 
             f, axs = plt.subplots(nrows=2, ncols=7)
 
-            for i, (sub_im,ax_col) in enumerate(zip(sub_ims, axs.T[:6])):
-                ax_col[0].imshow(sub_im, cmap='gray')
+            for i, (sub_im, ax_col) in enumerate(zip(sub_ims, axs.T[:6])):
+                ax_col[0].imshow(sub_im, cmap="gray")
                 ax_col[0].set_title(f"{channels[i]}")
-                ax_col[1].imshow(sub_im, cmap='gray')
+                ax_col[1].imshow(sub_im, cmap="gray")
                 ax_col[1].set_title(f"{channels[i]}")
-                ax_col[1].imshow(border_masked, cmap='autumn', alpha=0.3)
+                ax_col[1].imshow(border_masked, cmap="autumn", alpha=0.3)
                 ax_col[0].axis("off")
                 ax_col[1].axis("off")
-            axs[0,-1].imshow(sub_im, cmap='gray')
-            axs[0,-1].imshow(sub_gt_masked, cmap='autumn', alpha=0.3)
-            axs[0,-1].axis("off")
+            axs[0, -1].imshow(sub_im, cmap="gray")
+            axs[0, -1].imshow(sub_gt_masked, cmap="autumn", alpha=0.3)
+            axs[0, -1].axis("off")
 
-            axs[1,-1].set_title(f"{id}: {region.label} {region.bbox}")
-            axs[1,-1].axis("off")
-
+            axs[1, -1].set_title(f"{id}: {region.label} {region.bbox}")
+            axs[1, -1].axis("off")
 
             f.set_figwidth(15)
             f.set_figheight(5)
@@ -87,7 +106,6 @@ def eval_detections(path_dir_im, channels, path_dir_gt, path_dir_seg, out_dir, t
 
             plt.pause(0.1)
             plt.show(block=True)
-
 
             answer = input("1:good, 2:partial, 3:false pos. s:skip sample")
             if answer == "s":
@@ -118,20 +136,21 @@ def get_viewing_images(images, seg_pred, seg_gt, region):
     viewing_radius = 5
     bbox = region.bbox
 
-    xmin, xmax = np.amax([bbox[0]-viewing_radius, 0]), bbox[2]+viewing_radius
-    ymin, ymax = np.amax([bbox[1]-viewing_radius, 0]), bbox[3]+viewing_radius
+    xmin, xmax = np.amax([bbox[0] - viewing_radius, 0]), bbox[2] + viewing_radius
+    ymin, ymax = np.amax([bbox[1] - viewing_radius, 0]), bbox[3] + viewing_radius
 
     sub_ims = [im[xmin:xmax, ymin:ymax] for im in images]
     sub_seg = seg_pred[xmin:xmax, ymin:ymax]
     sub_mask = sub_seg == region.label
     sub_gt = seg_gt[xmin:xmax, ymin:ymax]
-    sub_gt_masked = np.ma.masked_array(sub_gt, sub_gt==0)
+    sub_gt_masked = np.ma.masked_array(sub_gt, sub_gt == 0)
 
-    border = ndi.binary_dilation(sub_mask==0) & sub_mask
+    border = ndi.binary_dilation(sub_mask == 0) & sub_mask
     border = ndi.binary_dilation(border)
-    border_masked = np.ma.masked_array(border, mask=border==0)
+    border_masked = np.ma.masked_array(border, mask=border == 0)
 
-    return sub_ims, border_masked , sub_gt_masked   
+    return sub_ims, border_masked, sub_gt_masked
+
 
 def get_detection_types(path_pickle):
     """Read and organize detection type data into a dataframe
@@ -145,7 +164,6 @@ def get_detection_types(path_pickle):
     with open(path_pickle, "rb") as handle:
         all_data = pickle.load(handle)
 
-    
     data_sample = []
     data_result = []
 
@@ -161,7 +179,7 @@ def get_detection_types(path_pickle):
         elif answer == "3":
             data_result.append("False positive")
             data_sample.append(sample)
-    
+
     data = {"Sample ID": data_sample, "Detection Type": data_result}
 
     df = pd.DataFrame(data=data)
@@ -199,8 +217,17 @@ def get_detection_types(path_pickle):
     return df
 
 
-def get_fn_rates(path_dir_gt, path_dir_seg, tag_gt = None, tag_seg = None, path_cp_stats_nuc = None, path_cp_stats_cell = None, cp_stat_limits = None, reg_stat_limits = None):
-    """Get false negative (missed cells) data for the results of a segmentation algorithm. 
+def get_fn_rates(
+    path_dir_gt,
+    path_dir_seg,
+    tag_gt=None,
+    tag_seg=None,
+    path_cp_stats_nuc=None,
+    path_cp_stats_cell=None,
+    cp_stat_limits=None,
+    reg_stat_limits=None,
+):
+    """Get false negative (missed cells) data for the results of a segmentation algorithm.
 
     Args:
         path_dir_gt (str): Path where ground truth cell detections are. Files are binary masks where each foreground connected component is near the center of a true cell instance.
@@ -234,7 +261,13 @@ def get_fn_rates(path_dir_gt, path_dir_seg, tag_gt = None, tag_seg = None, path_
 
         # filter based on stats
         if path_cp_stats_nuc:
-            regionprops_pred = cp_filter(id, regionprops_pred, path_cp_stats_nuc, path_cp_stats_cell, cp_stat_limits)
+            regionprops_pred = cp_filter(
+                id,
+                regionprops_pred,
+                path_cp_stats_nuc,
+                path_cp_stats_cell,
+                cp_stat_limits,
+            )
         if reg_stat_limits:
             regionprops_pred = reg_prop_filter(regionprops_pred, reg_stat_limits)
 
@@ -253,16 +286,22 @@ def get_fn_rates(path_dir_gt, path_dir_seg, tag_gt = None, tag_seg = None, path_
 
         data_id.append(id)
         data_fns.append(fns)
-        data_fnr.append(fns/len(regionprops_gt))
+        data_fnr.append(fns / len(regionprops_gt))
 
-    data = {"Sample ID": data_id, "Number of Cells Missed": data_fns, "Proportion of Cells Missed": data_fnr}
+    data = {
+        "Sample ID": data_id,
+        "Number of Cells Missed": data_fns,
+        "Proportion of Cells Missed": data_fnr,
+    }
     df = pd.DataFrame(data=data)
     df = df.sort_values(by=["Sample ID"])
 
     return df
-        
 
-def cp_filter(id, regionprops_pred, path_cp_stats_nuc, path_cp_stats_cell, cp_stat_limits):
+
+def cp_filter(
+    id, regionprops_pred, path_cp_stats_nuc, path_cp_stats_cell, cp_stat_limits
+):
     """Filter objects based on limits of specified CellProfiler statistics.
 
     Args:
@@ -286,28 +325,44 @@ def cp_filter(id, regionprops_pred, path_cp_stats_nuc, path_cp_stats_cell, cp_st
     for region in regionprops_pred:
         lbl = region.label
 
-        object_data_nuc = df_cp_stats_nuc[(df_cp_stats_nuc["Metadata_WellColumn"] == col) & (df_cp_stats_nuc["Metadata_WellRow"] == row) & (df_cp_stats_nuc["ObjectNumber"] == lbl)]
+        object_data_nuc = df_cp_stats_nuc[
+            (df_cp_stats_nuc["Metadata_WellColumn"] == col)
+            & (df_cp_stats_nuc["Metadata_WellRow"] == row)
+            & (df_cp_stats_nuc["ObjectNumber"] == lbl)
+        ]
 
         num_cells = object_data_nuc["Children_Cells_Count"].to_numpy()[0]
 
         if num_cells == 1:
-            object_data_cell = df_cp_stats_cell[(df_cp_stats_cell["Metadata_WellColumn"] == col) & (df_cp_stats_cell["Metadata_WellRow"] == row) & (df_cp_stats_cell["Parent_Nuclei"] == lbl)]
+            object_data_cell = df_cp_stats_cell[
+                (df_cp_stats_cell["Metadata_WellColumn"] == col)
+                & (df_cp_stats_cell["Metadata_WellRow"] == row)
+                & (df_cp_stats_cell["Parent_Nuclei"] == lbl)
+            ]
 
             valid_regions.append(region)
             for feature_name in cp_stat_limits.keys():
-                if cp_stat_limits[feature_name][0] != -1 and object_data_cell[feature_name].to_numpy()[0] < cp_stat_limits[feature_name][0]:
+                if (
+                    cp_stat_limits[feature_name][0] != -1
+                    and object_data_cell[feature_name].to_numpy()[0]
+                    < cp_stat_limits[feature_name][0]
+                ):
                     del valid_regions[-1]
                     break
 
-                if cp_stat_limits[feature_name][1] != -1 and object_data_cell[feature_name].to_numpy()[0] > cp_stat_limits[feature_name][1]:
+                if (
+                    cp_stat_limits[feature_name][1] != -1
+                    and object_data_cell[feature_name].to_numpy()[0]
+                    > cp_stat_limits[feature_name][1]
+                ):
                     del valid_regions[-1]
                     break
 
         elif num_cells > 1:
             raise ValueError(f"Multiple cells for nucleus {lbl}")
 
-
     return valid_regions
+
 
 def reg_prop_filter(regionprops_pred, reg_stat_limits):
     """Filter objects based on limits of specified RegionProperties statistics.
@@ -325,15 +380,20 @@ def reg_prop_filter(regionprops_pred, reg_stat_limits):
         valid_regions.append(region)
 
         for feature_name in reg_stat_limits.keys():
-            if reg_stat_limits[feature_name][0] != -1 and region[feature_name] < reg_stat_limits[feature_name][0]:
+            if (
+                reg_stat_limits[feature_name][0] != -1
+                and region[feature_name] < reg_stat_limits[feature_name][0]
+            ):
                 del valid_regions[-1]
                 break
 
-            if reg_stat_limits[feature_name][1] != -1 and region[feature_name] > reg_stat_limits[feature_name][1]:
+            if (
+                reg_stat_limits[feature_name][1] != -1
+                and region[feature_name] > reg_stat_limits[feature_name][1]
+            ):
                 del valid_regions[-1]
                 break
 
-        
     return valid_regions
 
 
@@ -342,7 +402,7 @@ def row_col_field_from_id(id):
     return row, col, field
 
 
-def get_id_to_path(path_dir, tag = None):
+def get_id_to_path(path_dir, tag=None):
     """Collect file paths at a directory into a dictionary organized by image ID.
 
     Args:
@@ -377,6 +437,7 @@ def get_id_to_path(path_dir, tag = None):
 
     return id_to_path
 
+
 def read_seg(path):
     """Read image/segmentation file. Supports .tif, .h5, and .npy
 
@@ -392,7 +453,8 @@ def read_seg(path):
         return read_seg_hdf5(path)
     elif ".npy" in path.suffix:
         return read_seg_npy(path)
-    
+
+
 def read_ims(paths):
     """Read image path(s)
 
@@ -408,14 +470,16 @@ def read_ims(paths):
         images = [read_seg(p) for p in paths]
         return images
 
+
 def read_seg_tiff(path_tif):
     image = Image.open(path_tif)
     image = np.array(image)
 
     return image
 
+
 def read_seg_hdf5(path_hdf5):
-    with h5py.File(path_hdf5, 'r') as f:
+    with h5py.File(path_hdf5, "r") as f:
         image = np.squeeze(f["exported_data"][()])
 
     bg_lbl = mode(image.flatten()).mode
@@ -426,8 +490,7 @@ def read_seg_hdf5(path_hdf5):
 
     return image
 
+
 def read_seg_npy(path_npy):
     image = np.load(path_npy, allow_pickle=True).item()["masks"]
     return image
-
-
