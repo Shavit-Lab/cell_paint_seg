@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import subprocess
 import time
+from skimage import io
 
 test = False
 
@@ -16,6 +17,7 @@ if test:
     hdf5_path = parent_dir / "hdf5s"
     output_path = parent_dir / "segmentations"
     convert = False
+    run_pxl_classification = False
     
 else:
     parent_dir =  "D:\\Aneesh\\Assay Dev 20230329\\BR00142687__2024-03-29T18_18_57-Measurement 1" 
@@ -23,11 +25,12 @@ else:
     tif_path = parent_dir / "Images"
     hdf5_path = parent_dir / "hdf5s"
     output_path = parent_dir / "segmentations"
-    convert = True
+    convert = False
+    run_pxl_classification = False
 
 ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
-bdry_pxl_path = "C:\\Users\\zeiss\\projects\\athey_als\\ilastik-profiler\\models\\mb-vs-nonmb-pxlclass.ilp"
-multicut_path = "C:\\Users\\zeiss\\projects\\athey_als\\ilastik-profiler\\models\\mb-vs-nonmb-multicut.ilp"
+bdry_pxl_path = "C:\\Users\\zeiss\\projects\\athey_als\\cell_paint_seg\\models\\mb-vs-nonmb-pxlclass.ilp"
+multicut_path = "C:\\Users\\zeiss\\projects\\athey_als\\cell_paint_seg\\models\\mb-vs-nonmb-multicut.ilp"
 
 
 files = os.listdir(tif_path)
@@ -67,20 +70,24 @@ print(f"Running ilastik pixel classification")
 files = os.listdir(hdf5_path)
 
 h5_files = [hdf5_path / f for f in files if ".h5" in f]
-h5_files_batches = [h5_files[i:i+10] for i in range(0, len(h5_files), 10)]
+h5_files = [h for h in h5_files if "_Probabilities.h5" not in str(h)]
 
-for h5_files_batch in tqdm(h5_files_batches, desc="executing boundary classification"):
-    command = [
-        ilastik_path,
-        "--headless",
-        f"--project={bdry_pxl_path}",
-    ] + h5_files_batch
+if run_pxl_classification:
+    h5_files_batches = [h5_files[i:i+10] for i in range(0, len(h5_files), 10)]
 
-    subprocess.run(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    for h5_files_batch in tqdm(h5_files_batches, desc="executing boundary classification"):
+        #print(h5_files_batch)
+        command = [
+            ilastik_path,
+            "--headless",
+            f"--project={bdry_pxl_path}",
+        ] + h5_files_batch
+
+        subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
 time_bdry_pxl = time.time()
 
@@ -113,6 +120,9 @@ for h5_file in tqdm(h5_files, desc="executing multicut"):
     if not os.path.isfile(cut_file):
         print(f"No cells detected in {h5_file} - writing blank segmentation...")
         blank_seg.save(cut_file)
+    else:
+        seg = io.imread(cut_file)
+        io.imsave(cut_file, seg.T)
 
 
 time_cut = time.time()
