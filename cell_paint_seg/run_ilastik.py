@@ -9,7 +9,9 @@ import time
 
 parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/deployment-test"
 
-ilastik_path = "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
+ilastik_path = (
+    "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
+)
 bdry_pxl_path = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/train-set/mb-vs-nonmb-pxlclass.ilp"
 multicut_path = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/train-set/mb-vs-nonmb-multicut.ilp"
 
@@ -31,7 +33,7 @@ print(f"Converting the following images to hdf5s: {image_names}")
 time_start = time.time()
 for image_name in tqdm(image_names, desc="Converting tifs to hdf5s"):
     channels = {}
-    with h5py.File(hdf5_path / f"{image_name}.h5", 'a') as h5:
+    with h5py.File(hdf5_path / f"{image_name}.h5", "a") as h5:
         for file in files:
             if image_name in file:
                 file_path = tif_path / file
@@ -40,7 +42,7 @@ for image_name in tqdm(image_names, desc="Converting tifs to hdf5s"):
                 im = np.array(im)
                 channels[c] = im
         im_allc = np.stack([channels[i] for i in range(1, 7)], axis=2)
-        h5.create_dataset(f"image", data = im_allc)
+        h5.create_dataset(f"image", data=im_allc)
 
 im_shape = im.shape
 
@@ -66,7 +68,7 @@ subprocess.run(
 time_bdry_pxl = time.time()
 
 # run headless multicut
-blank_seg = np.zeros(im_shape, dtype='int32')
+blank_seg = np.zeros(im_shape, dtype="int32")
 blank_seg = Image.fromarray(blank_seg)
 
 export_source = "Multicut Segmentation"
@@ -80,8 +82,7 @@ for h5_file in tqdm(h5_files, desc="executing multicut"):
         f"--raw_data={h5_file}",
         f"--probabilities={prob_file}",
         f"--export_source={export_source}",
-        f"--output_filename_format={output_format}"
-
+        f"--output_filename_format={output_format}",
     ]
 
     subprocess.run(
@@ -91,13 +92,14 @@ for h5_file in tqdm(h5_files, desc="executing multicut"):
     )
 
     cut_file = tif_path / (h5_file.stem + "-ch7sk1fk1fl1.tif")
-    
+
     # assume because whole image was classified as boundary
     if not os.path.isfile(cut_file):
         blank_seg.save(cut_file)
 
-    
 
 time_cut = time.time()
 
-print(f"Time for {n_files} image sites w/{len(channels.items())} channels: (Convert, {time_convert-time_start}), (Boundary pred., {time_bdry_pxl-time_convert}), (Multicut, {time_cut-time_bdry_pxl})")
+print(
+    f"Time for {n_files} image sites w/{len(channels.items())} channels: (Convert, {time_convert-time_start}), (Boundary pred., {time_bdry_pxl-time_convert}), (Multicut, {time_cut-time_bdry_pxl})"
+)
