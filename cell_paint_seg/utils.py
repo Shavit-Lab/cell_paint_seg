@@ -15,6 +15,21 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
 def eval_detections(path_dir_im, channels, path_dir_gt, path_dir_seg, out_dir, tag_gt = None, tag_seg = None, path_cp_stats_nuc = None, path_cp_stats_cell = None, cp_stat_limits = None, reg_stat_limits = None):
+    """Display predicted cell segmentations and ask for user classification to collect detection type data.
+
+    Args:
+        path_dir_im (str): Path to images
+        channels (list): List of channel names
+        path_dir_gt (str): Path to ground truth detections
+        path_dir_seg (str): Path to predicted segmentation
+        out_dir (str): Path to save detection type responses
+        tag_gt (str, optional): Substring to identify ground truth detection files. Defaults to None.
+        tag_seg (str, optional): Substring to identify predicted segmentation files. Defaults to None.
+        path_cp_stats_nuc (str, optional): Path to nucleus CellProfiler statistics if CellProfiler filtering is desired. Defaults to None.
+        path_cp_stats_cell (str, optional): Path to cell CellProfiler statistics if CellProfiler filtering is desired. Defaults to None.
+        cp_stat_limits (dict, optional): CellProfiler statistic names and limits (inclusive) if CellProfiler filtering is desired. Defaults to None.
+        reg_stat_limits (dict, optional): RegionProperties statistic names and limits (inclusive) if RegionProperties filtering is desired. Defaults to None.
+    """
     out_dir = Path(out_dir)
     id_to_path_im = get_id_to_path(path_dir_im)
     id_to_path_gt = get_id_to_path(path_dir_gt, tag_gt)
@@ -88,12 +103,13 @@ def eval_detections(path_dir_im, channels, path_dir_gt, path_dir_seg, out_dir, t
             with open(out_dir / f"{id}.pickle", "wb") as handle:
                 pickle.dump(data, handle)
 
-    
+    # Collect responses for all samples
     all_data = []
     for id in id_to_path_gt.keys():
         with open(out_dir / f"{id}.pickle", "rb") as handle:
             all_data += pickle.load(handle)
 
+    # Save collected responses
     with open(out_dir / f"all_data.pickle", "wb") as handle:
         pickle.dump(all_data, handle)
 
@@ -118,6 +134,14 @@ def get_viewing_images(images, seg_pred, seg_gt, region):
     return sub_ims, border_masked , sub_gt_masked   
 
 def get_detection_types(path_pickle):
+    """Read and organize detection type data into a dataframe
+
+    Args:
+        path_pickle (str): path of pickle files with (ground truth) labels predicted detections
+
+    Returns:
+        pd.DataFrame: dataframe with detection type data across different image IDs.
+    """
     with open(path_pickle, "rb") as handle:
         all_data = pickle.load(handle)
 
@@ -176,6 +200,21 @@ def get_detection_types(path_pickle):
 
 
 def get_fn_rates(path_dir_gt, path_dir_seg, tag_gt = None, tag_seg = None, path_cp_stats_nuc = None, path_cp_stats_cell = None, cp_stat_limits = None, reg_stat_limits = None):
+    """Get false negative (missed cells) data for the results of a segmentation algorithm. 
+
+    Args:
+        path_dir_gt (str): Path where ground truth cell detections are. Files are binary masks where each foreground connected component is near the center of a true cell instance.
+        path_dir_seg (str): Path where predicted segmentations are.
+        tag_gt (str, optional): Substring that identifies ground truth files in path_dir_gt. Defaults to None.
+        tag_seg (str, optional): Substring that identifies desired segmentation predictions in path_dir_seg. Defaults to None.
+        path_cp_stats_nuc (str, optional): Path to nucleus CellProfiler statistics if CellProfiler filtering is desired. Defaults to None.
+        path_cp_stats_cell (str, optional): Path to cell CellProfiler statistics if CellProfiler filtering is desired. Defaults to None.
+        cp_stat_limits (dict, optional): CellProfiler statistic names and limits (inclusive) if CellProfiler filtering is desired. Defaults to None.
+        reg_stat_limits (dict, optional): RegionProperties statistic names and limits (inclusive) if RegionProperties filtering is desired. Defaults to None.
+
+    Returns:
+        pd.DataFrame: Dataframe which contains false negative counts and rates for each image ID.
+    """
     id_to_path_gt = get_id_to_path(path_dir_gt, tag_gt)
     id_to_path_seg = get_id_to_path(path_dir_seg, tag_seg)
 
@@ -224,6 +263,21 @@ def get_fn_rates(path_dir_gt, path_dir_seg, tag_gt = None, tag_seg = None, path_
         
 
 def cp_filter(id, regionprops_pred, path_cp_stats_nuc, path_cp_stats_cell, cp_stat_limits):
+    """Filter objects based on limits of specified CellProfiler statistics.
+
+    Args:
+        id (str): Image ID
+        regionprops_pred (list): List of unfiltered RegionProperties
+        path_cp_stats_nuc (str): Path to nucleus CellProfiler statistics table
+        path_cp_stats_cell (str): Path to cell CellProfiler statistics table
+        cp_stat_limits (dict): Specified CellProfiler statistcs (str) and inclusive lower/upper limits (tuple)
+
+    Raises:
+        ValueError: If there are multiple nuclei associated with a cell in the CellProfiler statistics tables
+
+    Returns:
+        list: List of filtered RegionProperties
+    """
     row, col, _ = row_col_field_from_id(id)
     df_cp_stats_nuc = pd.read_csv(path_cp_stats_nuc)
     df_cp_stats_cell = pd.read_csv(path_cp_stats_cell)
@@ -256,6 +310,15 @@ def cp_filter(id, regionprops_pred, path_cp_stats_nuc, path_cp_stats_cell, cp_st
     return valid_regions
 
 def reg_prop_filter(regionprops_pred, reg_stat_limits):
+    """Filter objects based on limits of specified RegionProperties statistics.
+
+    Args:
+        regionprops_pred (list): List of unfiltered RegionProperties
+        reg_stat_limits (dict): Specified region properties (str) and inclusive lower/upper limits (tuple)
+
+    Returns:
+        list: List of filtered RegionProperties
+    """
 
     valid_regions = []
     for region in regionprops_pred:
@@ -280,6 +343,15 @@ def row_col_field_from_id(id):
 
 
 def get_id_to_path(path_dir, tag = None):
+    """Collect file paths at a directory into a dictionary organized by image ID.
+
+    Args:
+        path_dir (str): path to folder of images
+        tag (str, optional): substring that will identify whether a file should be identified or not. Defaults to None.
+
+    Returns:
+        dict: Key is image ID (str) and value is file path (str) or list of file paths (in the case where different channels are different files).
+    """
     path_dir = Path(path_dir)
 
     files = os.listdir(path_dir)
@@ -306,6 +378,14 @@ def get_id_to_path(path_dir, tag = None):
     return id_to_path
 
 def read_seg(path):
+    """Read image/segmentation file. Supports .tif, .h5, and .npy
+
+    Args:
+        path (str): Image/segmentation path.
+
+    Returns:
+        nd.array: Image array.
+    """
     if ".tif" in path.suffix:
         return read_seg_tiff(path)
     elif ".h5" in path.suffix:
@@ -314,6 +394,14 @@ def read_seg(path):
         return read_seg_npy(path)
     
 def read_ims(paths):
+    """Read image path(s)
+
+    Args:
+        paths (str or list): Image paths.
+
+    Returns:
+        nd.array or list: Image arrays.
+    """
     if isinstance(paths, str):
         return read_seg(paths)
     else:
