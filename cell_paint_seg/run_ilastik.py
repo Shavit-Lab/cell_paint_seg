@@ -6,8 +6,9 @@ import numpy as np
 from tqdm import tqdm
 import subprocess
 import time
+from skimage import io
 
-parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/deployment-test"
+parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/deployment-test-small"
 
 ilastik_path = (
     "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
@@ -19,7 +20,7 @@ multicut_path = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/A
 parent_dir = Path(parent_dir)
 tif_path = parent_dir / "tifs"
 hdf5_path = parent_dir / "hdf5s"
-
+output_path = parent_dir / "segmentations"
 
 files = os.listdir(tif_path)
 files = [f for f in files if ".tif" in f]
@@ -72,7 +73,7 @@ blank_seg = np.zeros(im_shape, dtype="int32")
 blank_seg = Image.fromarray(blank_seg)
 
 export_source = "Multicut Segmentation"
-output_format = f"{tif_path}/{{nickname}}-ch7sk1fk1fl1.tif"
+output_format = f"{output_path}/{{nickname}}-ch7sk1fk1fl1.tif"
 for h5_file in tqdm(h5_files, desc="executing multicut"):
     prob_file = str(h5_file)[:-3] + "_Probabilities.h5"
     command = [
@@ -91,11 +92,15 @@ for h5_file in tqdm(h5_files, desc="executing multicut"):
         stderr=subprocess.PIPE,
     )
 
-    cut_file = tif_path / (h5_file.stem + "-ch7sk1fk1fl1.tif")
+    cut_file = output_path / (h5_file.stem + "-ch7sk1fk1fl1.tif")
 
     # assume because whole image was classified as boundary
     if not os.path.isfile(cut_file):
+        print(f"No cells detected in {h5_file} - writing blank segmentation...")
         blank_seg.save(cut_file)
+    else:
+        seg = io.imread(cut_file)
+        io.imsave(cut_file, seg.T)
 
 
 time_cut = time.time()
