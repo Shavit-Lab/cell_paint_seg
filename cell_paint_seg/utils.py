@@ -6,13 +6,14 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 import h5py
-from skimage import measure
+from skimage import measure, segmentation
 import pandas as pd
 import scipy.ndimage as ndi
 from scipy.stats import mode
 import pickle
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
+import paramiko
 
 
 def eval_detections(
@@ -402,7 +403,7 @@ def row_col_field_from_id(id):
     return row, col, field
 
 
-def get_id_to_path(path_dir, tag=None):
+def get_id_to_path(path_dir, tag=None, remote=False):
     """Collect file paths at a directory into a dictionary organized by image ID.
 
     Args:
@@ -411,10 +412,18 @@ def get_id_to_path(path_dir, tag=None):
 
     Returns:
         dict: Key is image ID (str) and value is file path (str) or list of file paths (in the case where different channels are different files).
+        SFTPClient: optional, sftp client if files are from server. Only returned if remote is True
     """
     path_dir = Path(path_dir)
 
-    files = os.listdir(path_dir)
+    if remote:
+        ip, user, pswd = get_connection_details()
+        transport = paramiko.Transport((ip, 22))
+        transport.connect(None, user, pswd)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        files = [entry.filename for entry in sftp.listdir_attr(str(path_dir))]
+    else:
+        files = os.listdir(path_dir)
 
     if tag:
         files = [f for f in files if tag in f]
@@ -429,68 +438,98 @@ def get_id_to_path(path_dir, tag=None):
         else:
             id_to_path[f[:12]] = path_dir / f
 
-    for val in id_to_path.values():
-        if isinstance(val, list):
-            assert all([os.path.exists(v) for v in val])
-        else:
-            assert os.path.exists(val)
+    if not remote:
+        for val in id_to_path.values():
+            if isinstance(val, list):
+                assert all([os.path.exists(v) for v in val])
+            else:
+                assert os.path.exists(val)
 
-    return id_to_path
-
-
-def read_seg(path):
-    """Read image/segmentation file. Supports .tif, .h5, and .npy
-
-    Args:
-        path (str): Image/segmentation path.
-
-    Returns:
-        nd.array: Image array.
-    """
-    if ".tif" in path.suffix:
-        return read_seg_tiff(path)
-    elif ".h5" in path.suffix:
-        return read_seg_hdf5(path)
-    elif ".npy" in path.suffix:
-        return read_seg_npy(path)
-
-
-def read_ims(paths):
-    """Read image path(s)
-
-    Args:
-        paths (str or list): Image paths.
-
-    Returns:
-        nd.array or list: Image arrays.
-    """
-    if isinstance(paths, str):
-        return read_seg(paths)
+    if remote:
+        return id_to_path, sftp
     else:
-        images = [read_seg(p) for p in paths]
-        return images
+        return id_to_path
 
 
-def read_seg_tiff(path_tif):
-    image = Image.open(path_tif)
-    image = np.array(image)
+def get_connection_details():
+    with open("/Users/thomasathey/.ssh/config") as f:
+        data = f.readlines()
+        for i, item in enumerate(data):
+            if "fraenkel" in item:
+                ip = None
+                user = None
+                for subitem in data[i + 1 : i + 10]:
+                    if "User" in subitem:
+                        user = subitem.split(" ")[-1].strip()
+                    elif "HostName" in subitem:
+                        ip = subitem.split(" ")[-1].strip()
+                    if ip and user:
+                        break
+    with open("/Users/thomasathey/.ssh/fraenkel_password.txt") as f:
+        pswd = f.readline()
+        pswd = pswd.strip()
 
-    return image
+    return ip, user, pswd
 
 
-def read_seg_hdf5(path_hdf5):
-    with h5py.File(path_hdf5, "r") as f:
-        image = np.squeeze(f["exported_data"][()])
+def combine_soma_cell_labels(seg_soma, seg_cell):
+    """Modify a cell segmentation so it matchers with a soma instance segmentation.
 
-    bg_lbl = mode(image.flatten()).mode
+    Args:
+        seg_soma (np.array): Soma instance segmentation.
+        seg_cell (np.array): Cell segmentation (can be semantic or instance).
 
-    if bg_lbl != 0:
-        assert np.sum(image == 0) == 0
-        image[image == bg_lbl] = 0
+    Returns:
+        np.array: Cell instance segmentation such that each soma has at most one cell.
+    """
+    assert mode(seg_soma.flatten()).mode == 0
+    assert mode(seg_cell.flatten()).mode == 0
 
-    return image
+    lbl_cell = measure.label(seg_cell)
+    lbl_soma_filtered = np.copy(lbl_cell)
+    lbl_soma_filtered[seg_soma == 0] = 0
+
+    set_cell_lbls = set(np.unique(lbl_cell))
+    set_filtered_cell_lbls = set(np.unique(lbl_soma_filtered))
+    set_filtered_out = set_cell_lbls - set_filtered_cell_lbls
+
+    for lbl in set_filtered_out:
+        lbl_cell[lbl_cell == lbl] = 0
+    seg_cell = lbl_cell > 0
+
+    seg_cell_instance = segmentation.watershed(
+        seg_cell, markers=seg_soma, mask=seg_cell
+    )
+
+    return seg_cell_instance
 
 
-def read_seg_npy(path_npy):
-    image = np.load(path_npy, allow_pickle=True).item()["masks"]
-    return image
+def combine_soma_nucleus_labels(seg_soma, seg_nuc):
+    """Modify a nucleus segmentation so it matchers with a soma instance segmentation.
+
+    Args:
+        seg_soma (np.array): Soma instance segmentation.
+        seg_nuc (np.array): Nucleus segmentation (can be semantic or instance).
+
+    Returns:
+        np.array: Nucleus instance segmentation such that each soma has at most one nucleus.
+    """
+    assert mode(seg_soma.flatten()).mode == 0
+    assert mode(seg_nuc.flatten()).mode == 0
+
+    seg_nuc_filtered = np.copy(seg_soma)
+    seg_nuc_filtered[seg_nuc == 0] = 0  # all nuclei must lie within somas
+
+    for soma_id in np.unique(seg_soma):
+        if soma_id == 0:
+            continue
+
+        single_nuc_seg = measure.label(seg_nuc_filtered == soma_id)
+        if single_nuc_seg.max() > 1:
+            largestCC = (
+                single_nuc_seg == np.argmax(np.bincount(single_nuc_seg.flat)[1:]) + 1
+            )
+            mask = np.logical_and(largestCC == 0, seg_soma == soma_id)
+            seg_nuc_filtered[mask] = 0
+
+    return seg_nuc_filtered
