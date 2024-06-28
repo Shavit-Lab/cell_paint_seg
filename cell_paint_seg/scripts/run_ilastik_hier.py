@@ -13,10 +13,10 @@ from cell_paint_seg import utils, apply_ilastik, image_io
 
 ###########Inputs###########
 
-parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/deployment-test-small"
+parent_dir = "D:\\Aneesh\\Assay Dev 20230329\\BR00142687__2024-03-29T18_18_57-Measurement 1"
 
 ilastik_path = (
-    "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
+    "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
 )
 
 #################################
@@ -29,7 +29,7 @@ nuc_pxl_path = models_dir_path / "hier-nucleus-pxl.ilp"
 
 # convert to hdf5
 parent_dir = Path(parent_dir)
-tif_path = parent_dir / "tifs"
+tif_path = parent_dir / "Images"
 hdf5_path = parent_dir / "hdf5s"
 output_path = parent_dir / "segmentations"
 
