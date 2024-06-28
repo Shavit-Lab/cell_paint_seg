@@ -458,7 +458,7 @@ def get_connection_details():
             if "fraenkel" in item:
                 ip = None
                 user = None
-                for subitem in data[i+1: i+10]:
+                for subitem in data[i + 1 : i + 10]:
                     if "User" in subitem:
                         user = subitem.split(" ")[-1].strip()
                     elif "HostName" in subitem:
@@ -470,6 +470,7 @@ def get_connection_details():
         pswd = pswd.strip()
 
     return ip, user, pswd
+
 
 def combine_soma_cell_labels(seg_soma, seg_cell):
     """Modify a cell segmentation so it matchers with a soma instance segmentation.
@@ -496,11 +497,13 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
         lbl_cell[lbl_cell == lbl] = 0
     seg_cell = lbl_cell > 0
 
-    seg_cell_instance = segmentation.watershed(seg_cell, markers=seg_soma, mask=seg_cell)
+    seg_cell_instance = segmentation.watershed(
+        seg_cell, markers=seg_soma, mask=seg_cell
+    )
 
     return seg_cell_instance
-    
-    
+
+
 def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     """Modify a nucleus segmentation so it matchers with a soma instance segmentation.
 
@@ -515,7 +518,7 @@ def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     assert mode(seg_nuc.flatten()).mode == 0
 
     seg_nuc_filtered = np.copy(seg_soma)
-    seg_nuc_filtered[seg_nuc == 0] = 0 # all nuclei must lie within somas
+    seg_nuc_filtered[seg_nuc == 0] = 0  # all nuclei must lie within somas
 
     for soma_id in np.unique(seg_soma):
         if soma_id == 0:
@@ -523,7 +526,9 @@ def combine_soma_nucleus_labels(seg_soma, seg_nuc):
 
         single_nuc_seg = measure.label(seg_nuc_filtered == soma_id)
         if single_nuc_seg.max() > 1:
-            largestCC = single_nuc_seg == np.argmax(np.bincount(single_nuc_seg.flat)[1:])+1
+            largestCC = (
+                single_nuc_seg == np.argmax(np.bincount(single_nuc_seg.flat)[1:]) + 1
+            )
             mask = np.logical_and(largestCC == 0, seg_soma == soma_id)
             seg_nuc_filtered[mask] = 0
 

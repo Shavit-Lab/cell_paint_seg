@@ -54,7 +54,10 @@ time_convert = time.time()
 files = os.listdir(hdf5_path)
 h5_files = [hdf5_path / f for f in files if "p01.h5" in f]
 
-for project in tqdm([bdry_pxl_path, cell_pxl_path, nuc_pxl_path], desc="running pixel segmentation models..."):
+for project in tqdm(
+    [bdry_pxl_path, cell_pxl_path, nuc_pxl_path],
+    desc="running pixel segmentation models...",
+):
     apply_ilastik.apply_ilastik_images(h5_files, ilastik_path, project)
 
 time_pxl = time.time()
@@ -64,7 +67,9 @@ time_pxl = time.time()
 blank_seg = np.zeros(im_shape, dtype="int32")
 blank_seg = Image.fromarray(blank_seg)
 
-apply_ilastik.apply_ilastik_multicut(h5_files, ilastik_path, multicut_path, output_path, blank_seg)
+apply_ilastik.apply_ilastik_multicut(
+    h5_files, ilastik_path, multicut_path, output_path, blank_seg
+)
 
 time_cut = time.time()
 
@@ -73,31 +78,30 @@ time_cut = time.time()
 for h5_file in tqdm(h5_files, desc="combining segmentations"):
     im_id = h5_file.stem
 
-    seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif" 
+    seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
     seg_soma = image_io.read_seg(seg_soma_path)
     regions = utils.reg_prop_filter(measure.regionprops(seg_soma), reg_stat_limits)
     seg_soma_filtered = np.zeros_like(seg_soma)
     for region in regions:
         seg_soma_filtered[seg_soma == region.label] = region.label
-    seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif" 
+    seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
     io.imsave(seg_soma_path, seg_soma_filtered)
 
-
-    cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5" 
+    cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5"
     with h5py.File(cell_probs_path, "r") as f:
         cell_probs = np.squeeze(f["exported_data"][()])
-    seg_cell = (cell_probs[:,:,1] > 0.5).astype(np.uint8)
-    seg_cell[seg_soma_filtered > 0] = 1 # somas must be contained within cells
+    seg_cell = (cell_probs[:, :, 1] > 0.5).astype(np.uint8)
+    seg_cell[seg_soma_filtered > 0] = 1  # somas must be contained within cells
     seg_cell_instance = utils.combine_soma_cell_labels(seg_soma_filtered, seg_cell)
-    seg_cell_path = output_path / f"{im_id}-ch7sk1fk1fl1.tif" 
+    seg_cell_path = output_path / f"{im_id}-ch7sk1fk1fl1.tif"
     io.imsave(seg_cell_path, seg_cell_instance)
 
-    nuc_probs_path = hdf5_path / f"{im_id}_Probabilities_nuc.h5" 
+    nuc_probs_path = hdf5_path / f"{im_id}_Probabilities_nuc.h5"
     with h5py.File(nuc_probs_path, "r") as f:
         nuc_probs = np.squeeze(f["exported_data"][()])
-    seg_nuc = (nuc_probs[:,:,1] > 0.5).astype(np.uint8)
+    seg_nuc = (nuc_probs[:, :, 1] > 0.5).astype(np.uint8)
     seg_nuc = utils.combine_soma_nucleus_labels(seg_soma_filtered, seg_nuc)
-    seg_nuc_path = output_path / f"{im_id}-ch9sk1fk1fl1.tif" 
+    seg_nuc_path = output_path / f"{im_id}-ch9sk1fk1fl1.tif"
     io.imsave(seg_nuc_path, seg_nuc)
 
 

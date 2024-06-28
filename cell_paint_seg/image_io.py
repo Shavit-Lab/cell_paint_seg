@@ -6,7 +6,8 @@ import h5py
 from scipy.stats import mode
 from tqdm import tqdm
 
-def read_ims(paths, sftp_client = None):
+
+def read_ims(paths, sftp_client=None):
     """Read image path(s)
 
     Args:
@@ -22,7 +23,7 @@ def read_ims(paths, sftp_client = None):
         return images
 
 
-def read_seg(path, sftp_client = None):
+def read_seg(path, sftp_client=None):
     """Read image/segmentation file. Supports .tif, .h5, and .npy
 
     Args:
@@ -34,7 +35,12 @@ def read_seg(path, sftp_client = None):
     path = Path(path)
     if ".tif" in path.suffix:
         if sftp_client:
-            local_fname = Path("/Users/thomasathey/Documents/shavit-lab/fraenkel/cell_paint_seg/data/temp") / path.name
+            local_fname = (
+                Path(
+                    "/Users/thomasathey/Documents/shavit-lab/fraenkel/cell_paint_seg/data/temp"
+                )
+                / path.name
+            )
             sftp_client.get(str(path), str(local_fname))
             im = read_seg_tiff(local_fname)
             os.remove(local_fname)

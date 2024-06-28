@@ -4,9 +4,10 @@ import os
 from skimage import io
 from pathlib import Path
 
+
 def apply_ilastik_images(h5_files, ilastik_path, ilastik_project):
     if len(h5_files) > 10:
-        h5_files_batches = [h5_files[i:i+10] for i in range(0, len(h5_files), 10)]
+        h5_files_batches = [h5_files[i : i + 10] for i in range(0, len(h5_files), 10)]
     else:
         h5_files_batches = [h5_files]
 
@@ -23,7 +24,10 @@ def apply_ilastik_images(h5_files, ilastik_path, ilastik_project):
             stderr=subprocess.PIPE,
         )
 
-def apply_ilastik_multicut(h5_files, ilastik_path, multicut_project, output_dir_path, blank_seg):
+
+def apply_ilastik_multicut(
+    h5_files, ilastik_path, multicut_project, output_dir_path, blank_seg
+):
     output_dir_path = Path(output_dir_path)
     export_source = "Multicut Segmentation"
     output_file_suffix = "-ch8sk1fk1fl1.tif"

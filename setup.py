@@ -18,6 +18,7 @@ setup(
         "scipy",
         "matplotlib",
         "ipython",
+        "paramiko",
     ],
     license="MIT",
 )
