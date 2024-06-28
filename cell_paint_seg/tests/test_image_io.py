@@ -1,8 +1,9 @@
-import pytest 
+import pytest
 import numpy as np
 from skimage import io
 from cell_paint_seg import image_io
 import h5py
+
 
 @pytest.fixture
 def make_im_files(tmp_path):
@@ -19,23 +20,23 @@ def make_im_files(tmp_path):
 
     return image, path_tif, path_hdf5
 
+
 def test_read_ims(make_im_files):
     image_true, path_tif, path_hdf5 = make_im_files
 
     image_test = image_io.read_seg_tiff(path_tif)
-    np.testing.assert_array_equal(image_true, image_test) 
+    np.testing.assert_array_equal(image_true, image_test)
 
     image_test = image_io.read_seg_hdf5(path_hdf5)
-    np.testing.assert_array_equal(image_true, image_test) 
+    np.testing.assert_array_equal(image_true, image_test)
 
     for path in [path_tif, path_hdf5]:
         image_test = image_io.read_seg(path)
-        np.testing.assert_array_equal(image_true, image_test) 
+        np.testing.assert_array_equal(image_true, image_test)
 
         image_test = image_io.read_ims(str(path))
-        np.testing.assert_array_equal(image_true, image_test) 
+        np.testing.assert_array_equal(image_true, image_test)
 
     images_test = image_io.read_ims([path_tif, path_hdf5])
     for image_test in images_test:
-        np.testing.assert_array_equal(image_true, image_test) 
-
+        np.testing.assert_array_equal(image_true, image_test)
