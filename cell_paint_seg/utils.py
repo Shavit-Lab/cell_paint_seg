@@ -14,6 +14,7 @@ import pickle
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import paramiko
+from cell_paint_seg.image_io import read_ims, read_seg
 
 
 def eval_detections(
