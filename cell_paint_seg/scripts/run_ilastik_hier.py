@@ -13,7 +13,7 @@ from cell_paint_seg import utils, apply_ilastik, image_io
 
 ###########Inputs###########
 
-parent_dir = "D:\\Aneesh\\Assay Dev 20230329\\BR00142687__2024-03-29T18_18_57-Measurement 1"
+parent_dir = "D:\\Aneesh\\Assay Dev 20230329\\BR00142688__2024-03-29T19_57_13-Measurement 1"
 
 ilastik_path = (
     "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
