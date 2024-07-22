@@ -18,9 +18,11 @@ if test:
     output_path = parent_dir / "segmentations"
     convert = False
     run_pxl_classification = False
-    
+
 else:
-    parent_dir =  "D:\\Aneesh\\Assay Dev 20230329\\BR00142687__2024-03-29T18_18_57-Measurement 1" 
+    parent_dir = (
+        "D:\\Aneesh\\Assay Dev 20230329\\BR00142687__2024-03-29T18_18_57-Measurement 1"
+    )
     parent_dir = Path(parent_dir)
     tif_path = parent_dir / "Images"
     hdf5_path = parent_dir / "hdf5s"
@@ -52,12 +54,12 @@ for image_name in tqdm(image_names, desc="Converting tifs to hdf5s"):
             im = Image.open(file_path)
             im = np.array(im)
             channels[c] = im
-            
+
     im_allc = np.stack([channels[i] for i in range(1, 7)], axis=2)
-    
+
     if convert:
-        with h5py.File(hdf5_path / f"{image_name}.h5", 'a') as h5:
-            h5.create_dataset(f"image", data = im_allc)
+        with h5py.File(hdf5_path / f"{image_name}.h5", "a") as h5:
+            h5.create_dataset(f"image", data=im_allc)
     else:
         break
 
@@ -73,10 +75,12 @@ h5_files = [hdf5_path / f for f in files if ".h5" in f]
 h5_files = [h for h in h5_files if "_Probabilities.h5" not in str(h)]
 
 if run_pxl_classification:
-    h5_files_batches = [h5_files[i:i+10] for i in range(0, len(h5_files), 10)]
+    h5_files_batches = [h5_files[i : i + 10] for i in range(0, len(h5_files), 10)]
 
-    for h5_files_batch in tqdm(h5_files_batches, desc="executing boundary classification"):
-        #print(h5_files_batch)
+    for h5_files_batch in tqdm(
+        h5_files_batches, desc="executing boundary classification"
+    ):
+        # print(h5_files_batch)
         command = [
             ilastik_path,
             "--headless",
@@ -126,5 +130,6 @@ for h5_file in tqdm(h5_files, desc="executing multicut"):
 
 
 time_cut = time.time()
-print(f"Time for {n_files} image sites w/{len(channels.items())} channels: (Convert, {time_convert-time_start}), (Boundary pred., {time_bdry_pxl-time_convert}), (Multicut, {time_cut-time_bdry_pxl})")
-
+print(
+    f"Time for {n_files} image sites w/{len(channels.items())} channels: (Convert, {time_convert-time_start}), (Boundary pred., {time_bdry_pxl-time_convert}), (Multicut, {time_cut-time_bdry_pxl})"
+)

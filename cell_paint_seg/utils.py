@@ -482,8 +482,8 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
     Returns:
         np.array: Cell instance segmentation such that each soma has at most one cell.
     """
-    #assert mode(seg_soma.flatten()).mode == 0
-    #assert mode(seg_cell.flatten()).mode == 0
+    # assert mode(seg_soma.flatten()).mode == 0
+    # assert mode(seg_cell.flatten()).mode == 0
 
     lbl_cell = measure.label(seg_cell)
     lbl_soma_filtered = np.copy(lbl_cell)
