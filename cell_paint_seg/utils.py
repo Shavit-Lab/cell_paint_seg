@@ -399,6 +399,17 @@ def reg_prop_filter(regionprops_pred, reg_stat_limits):
     return valid_regions
 
 
+def path_to_filtered_seg(path_seg, reg_stat_limits):
+    seg_soma = read_seg(path_seg)
+    regions = reg_prop_filter(measure.regionprops(seg_soma), reg_stat_limits)
+    seg_soma_filtered = np.zeros_like(seg_soma)
+    # Make new labels consecutive
+    for i_reg, region in enumerate(regions):
+        seg_soma_filtered[seg_soma == region.label] = i_reg + 1
+
+    return seg_soma_filtered
+
+
 def row_col_field_from_id(id):
     row, col, field = int(id[1:3]), int(id[4:6]), int(id[7:9])
     return row, col, field
@@ -474,10 +485,13 @@ def get_connection_details():
 
 
 def combine_soma_cell_labels(seg_soma, seg_cell):
-    """Modify a cell segmentation so it matchers with a soma instance segmentation.
+    """Modify a cell segmentation so it matches with a soma instance segmentation.
+    Output satisfies:
+    - Every cell pixel is connected to their soma
+    - Cell pixels are assigned to their closest soma
 
     Args:
-        seg_soma (np.array): Soma instance segmentation.
+        seg_soma (np.array): Soma instance segmentation. Integer type.
         seg_cell (np.array): Cell segmentation (can be semantic or instance).
 
     Returns:
@@ -486,18 +500,24 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
     assert mode(seg_soma.flatten()).mode == 0
     assert mode(seg_cell.flatten()).mode == 0
 
-    lbl_cell = measure.label(seg_cell)
+    lbl_cell = measure.label(seg_cell)  # cell CC's
     lbl_soma_filtered = np.copy(lbl_cell)
-    lbl_soma_filtered[seg_soma == 0] = 0
+    lbl_soma_filtered[seg_soma == 0] = 0  # intersection of soma and cell
 
-    set_cell_lbls = set(np.unique(lbl_cell))
-    set_filtered_cell_lbls = set(np.unique(lbl_soma_filtered))
-    set_filtered_out = set_cell_lbls - set_filtered_cell_lbls
+    set_cell_lbls = set(np.unique(lbl_cell))  # set of cell CC's
+    set_filtered_cell_lbls = set(
+        np.unique(lbl_soma_filtered)
+    )  # set of cell CC's that have somas
+    set_filtered_out = (
+        set_cell_lbls - set_filtered_cell_lbls
+    )  # set of cell CC's that do not have soma
 
+    # remove CC's that are not connected to soma
     for lbl in set_filtered_out:
         lbl_cell[lbl_cell == lbl] = 0
     seg_cell = lbl_cell > 0
 
+    # assign cell pixels to closest soma
     seg_cell_instance = segmentation.watershed(
         seg_cell, markers=seg_soma, mask=seg_cell
     )
@@ -506,7 +526,11 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
 
 
 def combine_soma_nucleus_labels(seg_soma, seg_nuc):
-    """Modify a nucleus segmentation so it matchers with a soma instance segmentation.
+    """Modify a nucleus segmentation so it matches with a soma instance segmentation.
+    Output will satisfy:
+    - Nuclei fall within soma
+    - Nuclei have same label as surrounding soma
+    - There is only one (connected) nuclei per soma
 
     Args:
         seg_soma (np.array): Soma instance segmentation.
@@ -521,7 +545,7 @@ def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     seg_nuc_filtered = np.copy(seg_soma)
     seg_nuc_filtered[seg_nuc == 0] = 0  # all nuclei must lie within somas
 
-    for soma_id in np.unique(seg_soma):
+    for soma_id in np.unique(seg_nuc_filtered):
         if soma_id == 0:
             continue
 
