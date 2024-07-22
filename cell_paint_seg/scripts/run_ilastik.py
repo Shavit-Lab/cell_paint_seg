@@ -8,25 +8,38 @@ import subprocess
 import time
 from skimage import io
 
-parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/deployment-test-small"
+test = False
 
-ilastik_path = (
-    "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
-)
-bdry_pxl_path = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/train-set/mb-vs-nonmb-pxlclass.ilp"
-multicut_path = "/Users/thomasathey/Documents/shavit-lab/fraenkel/first-sample/Assay Dev 20230329/BR00142688__2024-03-29T19_57_13-Measurement 1/train-set/mb-vs-nonmb-multicut.ilp"
+if test:
+    parent_dir = "C:\\Users\\zeiss\\projects\\athey_als\\test-images"
+    parent_dir = Path(parent_dir)
+    tif_path = parent_dir / "tifs"
+    hdf5_path = parent_dir / "hdf5s"
+    output_path = parent_dir / "segmentations"
+    convert = False
+    run_pxl_classification = False
 
-# convert to hdf5
-parent_dir = Path(parent_dir)
-tif_path = parent_dir / "tifs"
-hdf5_path = parent_dir / "hdf5s"
-output_path = parent_dir / "segmentations"
+else:
+    parent_dir = (
+        "D:\\Aneesh\\Assay Dev 20230329\\BR00142687__2024-03-29T18_18_57-Measurement 1"
+    )
+    parent_dir = Path(parent_dir)
+    tif_path = parent_dir / "Images"
+    hdf5_path = parent_dir / "hdf5s"
+    output_path = parent_dir / "segmentations"
+    convert = False
+    run_pxl_classification = False
+
+ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
+bdry_pxl_path = "C:\\Users\\zeiss\\projects\\athey_als\\cell_paint_seg\\models\\mb-vs-nonmb-pxlclass.ilp"
+multicut_path = "C:\\Users\\zeiss\\projects\\athey_als\\cell_paint_seg\\models\\mb-vs-nonmb-multicut.ilp"
+
 
 files = os.listdir(tif_path)
 files = [f for f in files if ".tif" in f]
 image_names = [f.split("-")[0] for f in files]
 
-
+# convert to hdf5
 image_names = set(image_names)
 n_files = len(image_names)
 print(f"Converting the following images to hdf5s: {image_names}")
@@ -34,37 +47,51 @@ print(f"Converting the following images to hdf5s: {image_names}")
 time_start = time.time()
 for image_name in tqdm(image_names, desc="Converting tifs to hdf5s"):
     channels = {}
-    with h5py.File(hdf5_path / f"{image_name}.h5", "a") as h5:
-        for file in files:
-            if image_name in file:
-                file_path = tif_path / file
-                c = int(file_path.stem.split("-")[-1][2])
-                im = Image.open(file_path)
-                im = np.array(im)
-                channels[c] = im
-        im_allc = np.stack([channels[i] for i in range(1, 7)], axis=2)
-        h5.create_dataset(f"image", data=im_allc)
+    for file in files:
+        if image_name in file:
+            file_path = tif_path / file
+            c = int(file_path.stem.split("-")[-1][2])
+            im = Image.open(file_path)
+            im = np.array(im)
+            channels[c] = im
+
+    im_allc = np.stack([channels[i] for i in range(1, 7)], axis=2)
+
+    if convert:
+        with h5py.File(hdf5_path / f"{image_name}.h5", "a") as h5:
+            h5.create_dataset(f"image", data=im_allc)
+    else:
+        break
 
 im_shape = im.shape
 
-
 time_convert = time.time()
+
 # run headless pixel classification
-
+print(f"Running ilastik pixel classification")
 files = os.listdir(hdf5_path)
+
 h5_files = [hdf5_path / f for f in files if ".h5" in f]
+h5_files = [h for h in h5_files if "_Probabilities.h5" not in str(h)]
 
-command = [
-    ilastik_path,
-    "--headless",
-    f"--project={bdry_pxl_path}",
-] + h5_files
+if run_pxl_classification:
+    h5_files_batches = [h5_files[i : i + 10] for i in range(0, len(h5_files), 10)]
 
-subprocess.run(
-    command,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-)
+    for h5_files_batch in tqdm(
+        h5_files_batches, desc="executing boundary classification"
+    ):
+        # print(h5_files_batch)
+        command = [
+            ilastik_path,
+            "--headless",
+            f"--project={bdry_pxl_path}",
+        ] + h5_files_batch
+
+        subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
 time_bdry_pxl = time.time()
 
@@ -93,7 +120,6 @@ for h5_file in tqdm(h5_files, desc="executing multicut"):
     )
 
     cut_file = output_path / (h5_file.stem + "-ch7sk1fk1fl1.tif")
-
     # assume because whole image was classified as boundary
     if not os.path.isfile(cut_file):
         print(f"No cells detected in {h5_file} - writing blank segmentation...")
@@ -104,7 +130,6 @@ for h5_file in tqdm(h5_files, desc="executing multicut"):
 
 
 time_cut = time.time()
-
 print(
     f"Time for {n_files} image sites w/{len(channels.items())} channels: (Convert, {time_convert-time_start}), (Boundary pred., {time_bdry_pxl-time_convert}), (Multicut, {time_cut-time_bdry_pxl})"
 )
