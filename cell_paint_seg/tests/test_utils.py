@@ -33,3 +33,71 @@ def test_get_id_to_path(make_im_channels):
     for paths in id_to_path.values():
         for c, path in enumerate(paths):
             assert f"ch{c+1}" in str(path)
+
+
+def test_combine_soma_nucleus_labels():
+    seg_soma = np.zeros((10, 10))
+    seg_nuc = np.zeros((10, 10))
+
+    # nuclei are restricted to somas
+    seg_soma[:3, :3] = 1
+    seg_nuc[2:4, 2:4] = 1
+    seg_nuc_filtered_true = np.zeros((10, 10))
+    seg_nuc_filtered_true[2, 2] = 1
+    seg_nuc_filtered = utils.combine_soma_nucleus_labels(seg_soma, seg_nuc)
+    assert np.array_equal(seg_nuc_filtered, seg_nuc_filtered_true)
+
+    # largest connected component is chosen as nucleus
+    seg_soma[:5, :5] = 1
+    seg_nuc = np.zeros((10, 10))
+    seg_nuc[:3, :3] = 1
+    seg_nuc[4, 4] = 1
+    seg_nuc_filtered_true = np.zeros((10, 10))
+    seg_nuc_filtered_true[:3, :3] = 1
+    seg_nuc_filtered = utils.combine_soma_nucleus_labels(seg_soma, seg_nuc)
+    assert np.array_equal(seg_nuc_filtered, seg_nuc_filtered_true)
+
+    # multiple cells
+    seg_soma[:5, :5] = 1
+    seg_soma[8:, 8:] = 2
+    seg_nuc = np.zeros((10, 10))
+    seg_nuc[:3, :3] = 1
+    seg_nuc[4, 4] = 1
+    seg_nuc[7:, 7:] = 1
+    seg_nuc_filtered_true = np.zeros((10, 10))
+    seg_nuc_filtered_true[:3, :3] = 1
+    seg_nuc_filtered_true[8:, 8:] = 2
+    seg_nuc_filtered = utils.combine_soma_nucleus_labels(seg_soma, seg_nuc)
+    assert np.array_equal(seg_nuc_filtered, seg_nuc_filtered_true)
+
+
+def test_combine_soma_cell_labels():
+    seg_soma = np.zeros((10, 10), dtype=np.int32)
+    seg_cell = np.zeros((10, 10))
+
+    # cells are connected to somas
+    seg_soma[:3, :3] = 1
+    seg_cell[2:4, 2:4] = 1
+    seg_cell[8, 8] = 1
+    seg_cell_filtered_true = np.zeros((10, 10))
+    seg_cell_filtered_true[2:4, 2:4] = 1
+    seg_cell_filtered = utils.combine_soma_cell_labels(seg_soma, seg_cell)
+    assert np.array_equal(seg_cell_filtered, seg_cell_filtered_true)
+
+    # cell is assigned to closest soma
+    seg_soma = np.zeros((10, 10), dtype=np.int32)
+    seg_soma[:3, 0] = 1
+    seg_soma[5:6, 0] = 2
+    seg_cell = np.zeros((10, 10))
+    seg_cell[:, 0] = 1
+    seg_cell_filtered_true = np.zeros((10, 10))
+    seg_cell_filtered_true[:4, 0] = 1
+    seg_cell_filtered_true[4:, 0] = 2
+    seg_cell_filtered = utils.combine_soma_cell_labels(seg_soma, seg_cell)
+    assert np.array_equal(seg_cell_filtered, seg_cell_filtered_true)
+
+    # multiple cells
+    seg_soma[0, 5] = 3
+    seg_cell[:, 8] = 1
+    seg_cell_filtered = utils.combine_soma_cell_labels(seg_soma, seg_cell)
+    assert np.array_equal(seg_cell_filtered, seg_cell_filtered_true)
