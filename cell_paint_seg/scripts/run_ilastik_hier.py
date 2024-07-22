@@ -74,16 +74,11 @@ apply_ilastik.apply_ilastik_multicut(
 time_cut = time.time()
 
 # Combine hierarchical segmentation
-# TODO - there might be multiple connected nuclei regions in a single soma
 for h5_file in tqdm(h5_files, desc="combining segmentations"):
     im_id = h5_file.stem
 
     seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
-    seg_soma = image_io.read_seg(seg_soma_path)
-    regions = utils.reg_prop_filter(measure.regionprops(seg_soma), reg_stat_limits)
-    seg_soma_filtered = np.zeros_like(seg_soma)
-    for region in regions:
-        seg_soma_filtered[seg_soma == region.label] = region.label
+    seg_soma_filtered = utils.path_to_filtered_seg(seg_soma_path, reg_stat_limits)
     seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
     io.imsave(seg_soma_path, seg_soma_filtered)
 
