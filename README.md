@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/Shavit-Lab/cell_paint_seg/graph/badge.svg?token=0IYX9KSDKF)](https://codecov.io/gh/Shavit-Lab/cell_paint_seg)
+
 # cell_paint_seg
 
 This repository has two main functions
