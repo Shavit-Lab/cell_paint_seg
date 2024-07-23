@@ -518,15 +518,13 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
         lbl_cell[lbl_cell == lbl] = 0
     seg_cell = lbl_cell > 0
 
-    # seg_cell[seg_soma > 0] = 1
+    # Somas are part of cells
+    seg_cell[seg_soma > 0] = 1
 
     # assign cell pixels to closest soma
     seg_cell_instance = segmentation.watershed(
         seg_cell, markers=seg_soma, mask=seg_cell
     )
-
-    # Fill in any pixel that is a soma but not a cell
-    seg_cell_instance[seg_soma > 0] = seg_soma[seg_soma > 0]
 
     return seg_cell_instance
 
