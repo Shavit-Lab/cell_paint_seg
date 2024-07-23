@@ -1,3 +1,4 @@
+![example workflow](https://github.com/Shavit-Lab/cell_paint_seg/actions/workflows/.github/workflows/python-app.yml/badge.svg)
 ![example workflow](https://github.com/Shavit-Lab/cell_paint_seg/actions/workflows/.github/workflows/black.yml/badge.svg)
 [![codecov](https://codecov.io/gh/Shavit-Lab/cell_paint_seg/graph/badge.svg?token=0IYX9KSDKF)](https://codecov.io/gh/Shavit-Lab/cell_paint_seg)
 
