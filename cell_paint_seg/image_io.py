@@ -5,6 +5,7 @@ import numpy as np
 import h5py
 from scipy.stats import mode
 from tqdm import tqdm
+from skimage import exposure
 
 
 def read_ims(paths, sftp_client=None):
@@ -88,3 +89,26 @@ def convert_to_hdf5(id_to_path, hdf5_dir):
             h5.create_dataset(f"image", data=images)
 
     return channel_shape
+
+
+def write_visual_jpg(out_path, in_paths, rgb_tags = ["ch3", "ch6", "ch5"]):
+    image_RGB = []
+    for n_ch, rgb_tag in enumerate(rgb_tags):
+        for path in in_paths:
+            path = str(path)
+            if rgb_tag in path:
+                image = read_seg(path)
+                if n_ch < 2:
+                    image = exposure.equalize_adapthist(image, clip_limit=0.03)
+                else:
+                    image = exposure.equalize_adapthist(image, clip_limit=0.03, kernel_size=[s // 64 for s in image.shape])
+                image /= np.amax(image)
+                image *= 255
+                image = image.astype('uint8')
+                image_RGB.append(image)
+    
+    image_RGB = np.stack(image_RGB, axis=2)
+
+    image = Image.fromarray(image_RGB.astype('uint8')).convert('RGB')
+    image.save(out_path)
+
