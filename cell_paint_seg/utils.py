@@ -415,7 +415,16 @@ def row_col_field_from_id(id):
     return row, col, field
 
 
-def get_id_to_path(path_dir, tag=None, remote=False):
+def get_id_from_name_start(name):
+    id = name[:12]
+    return id
+
+def get_id_from_name_96(name):
+    items = name.split("_")
+    id = items[-1][:4]
+    return id
+
+def get_id_to_path(path_dir, tag=None, remote=False, id_from_name = get_id_from_name_start):
     """Collect file paths at a directory into a dictionary organized by image ID.
 
     Args:
@@ -442,13 +451,14 @@ def get_id_to_path(path_dir, tag=None, remote=False):
 
     id_to_path = {}
     for f in files:
-        if f[:12] in id_to_path.keys():
-            if isinstance(id_to_path[f[:12]], list):
-                id_to_path[f[:12]] = sorted(id_to_path[f[:12]] + [path_dir / f])
+        id = id_from_name(f)
+        if id in id_to_path.keys():
+            if isinstance(id_to_path[id], list):
+                id_to_path[id] = sorted(id_to_path[id] + [path_dir / f])
             else:
-                id_to_path[f[:12]] = sorted([id_to_path[f[:12]]] + [path_dir / f])
+                id_to_path[id] = sorted([id_to_path[id]] + [path_dir / f])
         else:
-            id_to_path[f[:12]] = path_dir / f
+            id_to_path[id] = path_dir / f
 
     if not remote:
         for val in id_to_path.values():
