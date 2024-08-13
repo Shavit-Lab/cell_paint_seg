@@ -538,7 +538,6 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
 
     return seg_cell_instance
 
-
 def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     """Modify a nucleus segmentation so it matches with a soma instance segmentation.
     Output will satisfy:
