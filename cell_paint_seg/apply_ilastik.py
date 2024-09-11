@@ -69,7 +69,7 @@ def apply_ilastik_multicut(
 
 def apply_ilastik_obj_class(
     h5_files, segmentation_path, ilastik_path, multicut_project
-):  
+):
     export_source = "Object Predictions"
 
     id_to_path_seg = get_id_to_path(

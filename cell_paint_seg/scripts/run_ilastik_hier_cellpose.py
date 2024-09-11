@@ -147,10 +147,10 @@ for id in id_to_path_seg.keys():
         seg = io.imread(id_to_path_seg[id][seg_channel])
 
         for i_ctype, ctype_list in enumerate([alive_ids, dead_ids]):
-            seg = np.copy(seg)
+            seg_class = np.copy(seg)
             for lbl in np.unique(seg):
                 if lbl not in ctype_list:
-                    seg[seg == lbl] = 0
+                    seg_class[seg_class == lbl] = 0
             io.imsave(
                 output_path / f"{id}-ch{10+i_ctype*3+seg_channel}sk1fk1fl1.tif", seg
             )

@@ -111,15 +111,30 @@ def convert(
     order=[0, 1, 2, 3, 4, 5],
     preprocess=False,
 ):
-    hdf5_dir = Path(hdf5_dir)
+    """Convert a set of images to h5 datasets.
+
+    Args:
+        id_to_path (dict): id_to_path dictionary which maps ids to list of image files corresponding to different channels.
+        cp_tif_dir (str, optional): if not None, then 2 channel tifs will be written to this directory. Defaults to None.
+        hdf5_dir (dtr, optional): if not None, then 6 channel h5 files will be written to this directory. Defaults to None.
+        order (list, optional): Channel indexes that correspond to brightfield, ER, AGP, Mito, DNA, RNA. Defaults to [0, 1, 2, 3, 4, 5].
+        preprocess (bool, optional): Whether to perform CLAHE before saving hdf5 files. Defaults to False.
+
+    Returns:
+        int: shape of input image, or written h5 dataset if hdf5_dir is not None.
+    """
     for image_id, image_paths in tqdm(id_to_path.items(), "converting..."):
+        
         images = read_ims(image_paths)
         channel_shape = images[0].shape
 
         images = [images[i] if i != -1 else np.zeros(channel_shape) for i in order]
         images = normalize(images)
 
+
         if cp_tif_dir is not None:
+            cp_tif_dir = Path(cp_tif_dir)
+
             ims_2channel = [images[i] * (2**16 - 1) for i in [5, 4]]
             ims_2channel = [im.astype("uint16") for im in ims_2channel]
             ims_2channel = np.stack(ims_2channel, axis=-1)
@@ -128,6 +143,8 @@ def convert(
             io.imsave(fname, ims_2channel)
 
         if hdf5_dir is not None:
+            hdf5_dir = Path(hdf5_dir)
+
             if preprocess:
                 images = preprocess_images(images)
 
