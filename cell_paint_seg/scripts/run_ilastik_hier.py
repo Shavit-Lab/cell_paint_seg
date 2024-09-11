@@ -13,11 +13,13 @@ from cell_paint_seg import utils, apply_ilastik, image_io
 
 ###########Inputs###########
 
-parent_dir = (
-    "D:\\Aneesh\\Assay Dev 20230329\\BR00142688__2024-03-29T19_57_13-Measurement 1"
+parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/96_well/exp2/train_set/"
+
+ilastik_path = (
+    "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
 )
 
-ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
+order = [-1, 0, 3, 2, 1, 4]
 
 #################################
 models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
@@ -29,7 +31,7 @@ nuc_pxl_path = models_dir_path / "hier-nucleus-pxl.ilp"
 
 # convert to hdf5
 parent_dir = Path(parent_dir)
-tif_path = parent_dir / "Images"
+tif_path = parent_dir / "tifs"
 hdf5_path = parent_dir / "hdf5s"
 output_path = parent_dir / "segmentations"
 
@@ -39,12 +41,14 @@ reg_stat_limits = {"area": (-1, 4000)}
 time_start = time.time()
 
 # Convert to hdf5
-id_to_path = utils.get_id_to_path(tif_path, tag=".tif")
+id_to_path = utils.get_id_to_path(
+    tif_path, tag=".tif", id_from_name=utils.get_id_from_name_96
+)
 image_ids = list(id_to_path.keys())
 n_files = len(image_ids)
 n_channels = len(id_to_path[image_ids[0]])
 
-im_shape = image_io.convert_to_hdf5(id_to_path, hdf5_path)
+im_shape = image_io.convert_to_hdf5(id_to_path, hdf5_path, order=order, preprocess=True)
 
 time_convert = time.time()
 
@@ -52,7 +56,7 @@ time_convert = time.time()
 # run headless cell pixel classification
 
 files = os.listdir(hdf5_path)
-h5_files = [hdf5_path / f for f in files if "p01.h5" in f]
+h5_files = [hdf5_path / f for f in files if ".h5" in f]
 
 for project in tqdm(
     [bdry_pxl_path, cell_pxl_path, nuc_pxl_path],
@@ -80,6 +84,7 @@ for h5_file in tqdm(h5_files, desc="combining segmentations"):
     seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
     seg_soma_filtered = utils.path_to_filtered_seg(seg_soma_path, reg_stat_limits)
     seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
+    seg_soma_filtered = seg_soma_filtered.astype(np.uint32)
     io.imsave(seg_soma_path, seg_soma_filtered)
 
     cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5"

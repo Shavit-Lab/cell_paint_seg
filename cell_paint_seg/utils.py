@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 import h5py
-from skimage import measure, segmentation
+from skimage import measure, segmentation, exposure
 import pandas as pd
 import scipy.ndimage as ndi
 from scipy.stats import mode
@@ -415,7 +415,38 @@ def row_col_field_from_id(id):
     return row, col, field
 
 
-def get_id_to_path(path_dir, tag=None, remote=False):
+def get_id_from_name_start(name):
+    id = name[:12]
+    return id
+
+
+def get_id_from_name_96(name):
+    items = name.split("_")
+    id = items[-1][:4]
+    return id
+
+
+def get_id_from_name_first_us(name):
+    items = name.split("_")
+    id = items[0]
+    return id
+
+
+def get_id_from_name_first_hyph(name):
+    items = name.split("-")
+    id = items[0]
+    return id
+
+
+def get_id_from_name_first_pd(name):
+    items = name.split(".")
+    id = items[0]
+    return id
+
+
+def get_id_to_path(
+    path_dir, tag=None, remote=False, id_from_name=get_id_from_name_start
+):
     """Collect file paths at a directory into a dictionary organized by image ID.
 
     Args:
@@ -442,13 +473,14 @@ def get_id_to_path(path_dir, tag=None, remote=False):
 
     id_to_path = {}
     for f in files:
-        if f[:12] in id_to_path.keys():
-            if isinstance(id_to_path[f[:12]], list):
-                id_to_path[f[:12]] = sorted(id_to_path[f[:12]] + [path_dir / f])
+        id = id_from_name(f)
+        if id in id_to_path.keys():
+            if isinstance(id_to_path[id], list):
+                id_to_path[id] = sorted(id_to_path[id] + [path_dir / f])
             else:
-                id_to_path[f[:12]] = sorted([id_to_path[f[:12]]] + [path_dir / f])
+                id_to_path[id] = sorted([id_to_path[id]] + [path_dir / f])
         else:
-            id_to_path[f[:12]] = path_dir / f
+            id_to_path[id] = path_dir / f
 
     if not remote:
         for val in id_to_path.values():
@@ -534,7 +566,7 @@ def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     Output will satisfy:
     - Nuclei fall within soma
     - Nuclei have same label as surrounding soma
-    - There is only one (connected) nuclei per soma
+    - There is at most one (connected) nuclei per soma
 
     Args:
         seg_soma (np.array): Soma instance segmentation.
@@ -562,3 +594,162 @@ def combine_soma_nucleus_labels(seg_soma, seg_nuc):
             seg_nuc_filtered[mask] = 0
 
     return seg_nuc_filtered
+
+
+def check_valid_labels(seg_nuc, seg_soma, seg_cell):
+    """Check if the soma, nucleus, and cell segmentations have valid labels.
+    - For each compartment, the majority of pixels should be background.
+    - For each compartment, all objects should be connected and have unique, consecutive labels.
+    - Each soma should contain a nucleus with the same id.
+    - Each cell should contain a soma with the same id.
+
+
+    Args:
+        seg_nuc (np.array): nucleus instance segmentation
+        seg_soma (np.array): soma instance segmentation
+        seg_cell (np.array): cell instance segmentation
+    """
+    assert check_valid_labels_comp(seg_nuc)
+    assert check_valid_labels_comp(seg_soma)
+    assert check_valid_labels_comp(seg_cell)
+
+    label_match = seg_cell[seg_soma > 0] == seg_soma[seg_soma > 0]
+    if not label_match.all():
+        mismatches = np.where(label_match == False)
+        print(seg_soma[seg_soma > 0][mismatches])
+        print("-------------->>>>>>>>>>>")
+        print(seg_cell[seg_soma > 0][mismatches])
+        raise AssertionError(f"Soma and cell labels do not match")
+
+    assert (seg_soma[seg_nuc > 0] == seg_nuc[seg_nuc > 0]).all()
+
+
+def check_valid_labels_comp(seg):
+    """Check if a nucleus segmentation has valid labels.
+
+    Args:
+        seg (np.array): Instance segmentation.
+
+    Returns:
+        bool: True if the majority is background and all objects are connected and have unique, consecutive labels.
+    """
+    assert mode(seg.flatten()).mode == 0
+
+    unq = np.unique(seg)
+    assert len(unq) == np.amax(seg) + 1
+
+    for soma_id in unq:
+        if soma_id == 0:
+            continue
+
+        single_nuc_seg = measure.label(seg == soma_id)
+        if single_nuc_seg.max() > 1:
+            return False
+
+    return True
+
+
+def create_rgb(images, channels):
+    """Create an RGB image from a list of grayscale images.
+
+    Args:
+        images (list): List of grayscale images.
+        channels (list): List of channel names.
+
+    Returns:
+        np.array: RGB image.
+    """
+    images = [im.astype("float64") for im in images]
+    images = [np.linalg.norm(im, axis=-1) for im in images]
+    images = [im / np.amax(im) for im in images]
+    images = [exposure.equalize_adapthist(im, clip_limit=0.03) for im in images]
+    im_rgb = np.stack([images[c] for c in channels], axis=2)
+
+    return im_rgb
+
+
+def label_celltype(
+    path_dir_im,
+    channels,
+    path_dir_gt,
+    out_dir,
+    tag_im=".tif",
+    tag_gt=".tif",
+):
+    out_dir = Path(out_dir)
+    id_to_path_im = get_id_to_path(
+        path_dir_im, tag_im, id_from_name=get_id_from_name_96
+    )
+    id_to_path_gt = get_id_to_path(
+        path_dir_gt, tag_gt, id_from_name=get_id_from_name_96
+    )
+
+    margin = 3
+
+    data = []
+
+    for id in id_to_path_gt.keys():
+        save = True
+        images = read_ims(id_to_path_im[id])
+        seg_gt = read_seg(id_to_path_gt[id][0])
+
+        # create rgb image
+        im_rgb = create_rgb(images, channels)
+
+        regionprops_gt = measure.regionprops(seg_gt)
+
+        for i, region in enumerate(regionprops_gt):
+            if i % 10 == 0:
+                print(f"{i}/{len(regionprops_gt)}")
+
+            im_rgb_cropped = im_rgb[
+                region.bbox[0] : region.bbox[2], region.bbox[1] : region.bbox[3], :
+            ]
+            seg_cropped = seg_gt[
+                region.bbox[0] : region.bbox[2], region.bbox[1] : region.bbox[3]
+            ]
+            seg_cropped = seg_cropped == region.label
+
+            # make a binary array that outlines the region of interest
+            border = ndi.binary_dilation(seg_cropped == 0) & seg_cropped
+            border = ndi.binary_dilation(border)
+            border_masked = np.ma.masked_array(border, mask=border == 0)
+
+            f, axs = plt.subplots(nrows=1, ncols=2)
+
+            for ax in axs:
+                ax.imshow(im_rgb_cropped)
+                ax.axis("off")
+
+            axs[1].imshow(border_masked, cmap="winter", alpha=0.3)
+
+            f.set_figwidth(10)
+            f.set_figheight(5)
+            plt.tight_layout()
+
+            plt.pause(0.1)
+            plt.show(block=True)
+
+            answer = input("1:alive, 2:dead, 3:unknown, s:skip sample")
+            if answer == "s":
+                save = False
+                break
+            data_point = (id, region.label, answer)
+
+            data.append(data_point)
+            clear_output()
+
+        if save:
+            print(f"Saving {out_dir}/{id}.pickle")
+            with open(out_dir / f"{id}.pickle", "wb") as handle:
+                pickle.dump(data, handle)
+
+    # # Collect responses for all samples
+    # all_data = []
+    # for id in id_to_path_gt.keys():
+    #     with open(out_dir / f"{id}.pickle", "rb") as handle:
+    #         all_data += pickle.load(handle)
+
+    # # Save collected responses
+    # with open(out_dir / f"all_data.pickle", "wb") as handle:
+    #     pickle.dump(all_data, handle)

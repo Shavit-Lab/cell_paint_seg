@@ -3,6 +3,11 @@ from tqdm import tqdm
 import os
 from skimage import io
 from pathlib import Path
+from cell_paint_seg.utils import (
+    get_id_to_path,
+    get_id_from_name_first_hyph,
+    get_id_from_name_first_pd,
+)
 
 
 def apply_ilastik_images(h5_files, ilastik_path, ilastik_project):
@@ -60,3 +65,31 @@ def apply_ilastik_multicut(
         else:
             seg = io.imread(cut_file)
             io.imsave(cut_file, seg.T)
+
+
+def apply_ilastik_obj_class(
+    h5_files, segmentation_path, ilastik_path, multicut_project
+):
+    export_source = "Object Predictions"
+
+    id_to_path_seg = get_id_to_path(
+        segmentation_path, tag="ch8", id_from_name=get_id_from_name_first_hyph
+    )
+
+    for h5_file in tqdm(h5_files, desc="executing object classification"):
+        id = str(h5_file.stem)
+        seg_file = id_to_path_seg[id]
+        command = [
+            ilastik_path,
+            "--headless",
+            f"--project={multicut_project}",
+            f"--raw_data={h5_file}",
+            f"--segmentation_image={seg_file}",
+            f"--export_source={export_source}",
+        ]
+
+        subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
