@@ -124,13 +124,12 @@ def convert(
         int: shape of input image, or written h5 dataset if hdf5_dir is not None.
     """
     for image_id, image_paths in tqdm(id_to_path.items(), "converting..."):
-        
+
         images = read_ims(image_paths)
         channel_shape = images[0].shape
 
         images = [images[i] if i != -1 else np.zeros(channel_shape) for i in order]
         images = normalize(images)
-
 
         if cp_tif_dir is not None:
             cp_tif_dir = Path(cp_tif_dir)

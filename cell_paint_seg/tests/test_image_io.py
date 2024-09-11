@@ -25,6 +25,7 @@ def make_im_files(tmp_path):
 
     return image, path_tif, path_hdf5, path_png
 
+
 @pytest.fixture
 def make_multic_im_files(tmp_path):
     im_dir = tmp_path
@@ -40,6 +41,7 @@ def make_multic_im_files(tmp_path):
         id_to_paths[id] = paths
 
     return image, id_to_paths
+
 
 @pytest.fixture
 def make_rgb_im_files(tmp_path):
@@ -88,9 +90,10 @@ def test_read_ims(make_im_files):
     for image_test in images_test:
         np.testing.assert_array_equal(image_true, image_test)
 
+
 def test_convert(tmp_path, make_rgb_im_files):
     image, id_to_paths = make_rgb_im_files
-    #assert False, id_to_paths
+    # assert False, id_to_paths
     image_io.convert(id_to_paths, cp_tif_dir=tmp_path, hdf5_dir=tmp_path)
 
     for id in id_to_paths.keys():
@@ -103,6 +106,7 @@ def test_convert(tmp_path, make_rgb_im_files):
         assert images.shape == (100, 100, 2)
         assert np.sum(images > 0) == 200
 
+
 def test_write_visual_jpg(tmp_path, make_multic_im_files):
     _, id_to_paths = make_multic_im_files
 
@@ -110,4 +114,3 @@ def test_write_visual_jpg(tmp_path, make_multic_im_files):
     in_paths = list(id_to_paths.values())[0]
 
     image_io.write_visual_jpg(out_path, in_paths)
-

@@ -152,7 +152,8 @@ for id in id_to_path_seg.keys():
                 if lbl not in ctype_list:
                     seg_class[seg_class == lbl] = 0
             io.imsave(
-                output_path / f"{id}-ch{10+i_ctype*3+seg_channel}sk1fk1fl1.tif", seg
+                output_path / f"{id}-ch{10+i_ctype*3+seg_channel}sk1fk1fl1.tif",
+                seg_class,
             )
 
 time_filter_dead = time.time()
