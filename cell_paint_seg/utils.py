@@ -609,9 +609,9 @@ def check_valid_labels(seg_nuc, seg_soma, seg_cell):
         seg_soma (np.array): soma instance segmentation
         seg_cell (np.array): cell instance segmentation
     """
-    assert check_valid_labels_nuc(seg_nuc)
-    assert check_valid_labels_soma(seg_soma)
-    assert check_valid_labels_cell(seg_cell)
+    assert check_valid_labels_comp(seg_nuc)
+    assert check_valid_labels_comp(seg_soma)
+    assert check_valid_labels_comp(seg_cell)
 
     label_match = seg_cell[seg_soma > 0] == seg_soma[seg_soma > 0]
     if not label_match.all():
@@ -624,75 +624,25 @@ def check_valid_labels(seg_nuc, seg_soma, seg_cell):
     assert (seg_soma[seg_nuc > 0] == seg_nuc[seg_nuc > 0]).all()
 
 
-def check_valid_labels_nuc(seg_nuc):
+def check_valid_labels_comp(seg):
     """Check if a nucleus segmentation has valid labels.
 
     Args:
-        seg_nuc (np.array): Nucleus instance segmentation.
+        seg (np.array): Instance segmentation.
 
     Returns:
-        bool: True if the majority is background and all nuclei are connected and have unique, consecutive labels.
+        bool: True if the majority is background and all objects are connected and have unique, consecutive labels.
     """
-    assert mode(seg_nuc.flatten()).mode == 0
+    assert mode(seg.flatten()).mode == 0
 
-    unq = np.unique(seg_nuc)
-    assert len(unq) == np.amax(seg_nuc) + 1
+    unq = np.unique(seg)
+    assert len(unq) == np.amax(seg) + 1
 
     for soma_id in unq:
         if soma_id == 0:
             continue
 
-        single_nuc_seg = measure.label(seg_nuc == soma_id)
-        if single_nuc_seg.max() > 1:
-            return False
-
-    return True
-
-
-def check_valid_labels_soma(seg_soma):
-    """Check if a soma segmentation has valid labels.
-
-    Args:
-        seg_soma (np.array): Soma instance segmentation.
-
-    Returns:
-        bool: True if the majority is background and all somas are connected and have unique, consecutive labels.
-    """
-    assert mode(seg_soma.flatten()).mode == 0
-
-    unq = np.unique(seg_soma)
-    assert len(unq) == np.amax(seg_soma) + 1
-
-    for soma_id in unq:
-        if soma_id == 0:
-            continue
-
-        single_soma_seg = measure.label(seg_soma == soma_id)
-        if single_soma_seg.max() > 1:
-            return False
-
-    return True
-
-
-def check_valid_labels_cell(seg_cell):
-    """Check if a cell segmentation has valid labels.
-
-    Args:
-        seg_cell (np.array): Cell instance segmentation.
-
-    Returns:
-        bool: True if the majority is background and all cells are connected and have unique, consecutive labels.
-    """
-    assert mode(seg_cell.flatten()).mode == 0
-
-    unq = np.unique(seg_cell)
-    assert len(unq) == np.amax(seg_cell) + 1
-
-    for soma_id in unq:
-        if soma_id == 0:
-            continue
-
-        single_nuc_seg = measure.label(seg_cell == soma_id)
+        single_nuc_seg = measure.label(seg == soma_id)
         if single_nuc_seg.max() > 1:
             return False
 

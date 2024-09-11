@@ -140,23 +140,23 @@ def test_get_id_from_name():
     assert utils.get_id_from_name_first_pd(f"{id}.junk") == id
 
 
-def test_check_valid_labels_nuc():
+def test_check_valid_labels_comp():
     seg = np.zeros((10, 10))
 
     seg[0, 0] = 1
     seg[5, 5] = 2
-    assert utils.check_valid_labels_nuc(seg)
+    assert utils.check_valid_labels_comp(seg)
 
     # majority is not background
     with pytest.raises(Exception):
-        utils.check_valid_labels_nuc(np.ones((10, 10)))
+        utils.check_valid_labels_comp(np.ones((10, 10)))
 
     # labels not consecutive
     seg[0, 0] = 0
     with pytest.raises(Exception):
-        utils.check_valid_labels_nuc(seg)
+        utils.check_valid_labels_comp(seg)
 
     # one of the labels is not connected
     seg[0, 0] = 1
     seg[9, 9] = 1
-    assert utils.check_valid_labels_nuc(seg) == False
+    assert utils.check_valid_labels_comp(seg) == False
