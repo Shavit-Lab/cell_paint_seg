@@ -132,7 +132,7 @@ def test_get_id_from_name():
     id = "012345678901"
     assert utils.get_id_from_name_start(f"{id}junk") == id
 
-    id = "s0123"
+    id = "s012"
     assert utils.get_id_from_name_96(f"junk_{id}junk") == id
 
     assert utils.get_id_from_name_first_us(f"{id}_junk") == id
