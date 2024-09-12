@@ -13,15 +13,15 @@ from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
 ###########Inputs###########
 
-parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/96_well/exp2/train_set/"
+parent_dir = "C:\\Users\\zeiss\\projects\\athey_als\\test-images-96"
 
 ilastik_path = (
-    "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
+    "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
 )
 
 order = [-1, 0, 3, 2, 1, 4]
 
-#################################
+#############Default parameters####################
 models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
 
 cell_pxl_path = models_dir_path / "hier-cell-pxl.ilp"
@@ -36,6 +36,22 @@ twochan_path = parent_dir / "twochannel_cpose"
 output_path = parent_dir / "segmentations"
 
 reg_stat_limits = {"area": (-1, 4000)}
+#############Outputs###############
+# hdf5_path:
+#   - *.h5 - 6 channel images
+#   - *_Object Predictions.h5 - predictions of whether somas are alive are dead
+#   - *_Probabilities_cell.h5 - pixel predictions of whether pixels are part of a cell
+# twochan_oath:
+#   - *.tif - 2 channel images
+#   - *.npy - segmented objects from cellpsoe
+#   - *_cp_masks.tif - cellpose segmentation
+# output_path:
+#   - *.h5 - soma segmentation
+#   - *.tif - segmentation of objects with channels: 
+#       - 7,10,13 - all,alive,dead cells respectively
+#       - 8,11,14 - all,alive,dead somas respectively
+#       - 9,12,15 - all,alive,dead nuclei respectively
+################################
 
 
 time_start = time.time()
@@ -91,6 +107,10 @@ for h5_file in tqdm(h5_files, desc="combining segmentations"):
     seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
     seg_soma_filtered = seg_soma_filtered.astype(np.uint32)
     io.imsave(seg_soma_path, seg_soma_filtered)
+    seg_soma_path_h5 = output_path / f"{im_id}-ch8sk1fk1fl1.h5"
+    with h5py.File(seg_soma_path_h5, "a") as h5:
+        h5.create_dataset("segmentation", data=seg_soma_filtered)
+
 
     cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5"
     with h5py.File(cell_probs_path, "r") as f:

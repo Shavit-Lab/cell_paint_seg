@@ -1,6 +1,7 @@
 import subprocess
 from tqdm import tqdm
 import os
+import sys
 from pathlib import Path
 from cell_paint_seg.utils import get_id_to_path, get_id_from_name_first_us
 
@@ -33,7 +34,7 @@ def apply_cpose(tif_dir, output_dir, nuclei=False):
 def run_cpose(tif_dir, fg_channel, bg_channel, project="cyto3"):
     # nuclei
     command = [
-        "python",
+        sys.executable,
         "-m",
         "cellpose",
         f"--dir={tif_dir}",

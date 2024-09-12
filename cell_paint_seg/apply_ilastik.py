@@ -73,7 +73,7 @@ def apply_ilastik_obj_class(
     export_source = "Object Predictions"
 
     id_to_path_seg = get_id_to_path(
-        segmentation_path, tag="ch8", id_from_name=get_id_from_name_first_hyph
+        segmentation_path, tag=".h5", id_from_name=get_id_from_name_first_hyph
     )
 
     for h5_file in tqdm(h5_files, desc="executing object classification"):
