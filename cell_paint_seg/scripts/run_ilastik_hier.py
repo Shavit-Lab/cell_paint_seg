@@ -19,6 +19,8 @@ parent_dir = (
 
 ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
 
+skip_conversion = True
+
 #################################
 models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
 
@@ -44,7 +46,7 @@ image_ids = list(id_to_path.keys())
 n_files = len(image_ids)
 n_channels = len(id_to_path[image_ids[0]])
 
-im_shape = image_io.convert_to_hdf5(id_to_path, hdf5_path)
+im_shape = image_io.convert_to_hdf5(id_to_path, hdf5_path, skip=skip_conversion)
 
 time_convert = time.time()
 
@@ -54,22 +56,22 @@ time_convert = time.time()
 files = os.listdir(hdf5_path)
 h5_files = [hdf5_path / f for f in files if "p01.h5" in f]
 
-for project in tqdm(
-    [bdry_pxl_path, cell_pxl_path, nuc_pxl_path],
-    desc="running pixel segmentation models...",
-):
-    apply_ilastik.apply_ilastik_images(h5_files, ilastik_path, project)
+# for project in tqdm(
+#     [bdry_pxl_path, cell_pxl_path, nuc_pxl_path],
+#     desc="running pixel segmentation models...",
+# ):
+#     apply_ilastik.apply_ilastik_images(h5_files, ilastik_path, project)
 
 time_pxl = time.time()
 
 
-# run headless multicut
-blank_seg = np.zeros(im_shape, dtype="int32")
-blank_seg = Image.fromarray(blank_seg)
+# # run headless multicut
+# blank_seg = np.zeros(im_shape, dtype="int32")
+# blank_seg = Image.fromarray(blank_seg)
 
-apply_ilastik.apply_ilastik_multicut(
-    h5_files, ilastik_path, multicut_path, output_path, blank_seg
-)
+# apply_ilastik.apply_ilastik_multicut(
+#     h5_files, ilastik_path, multicut_path, output_path, blank_seg
+# )
 
 time_cut = time.time()
 
@@ -79,7 +81,6 @@ for h5_file in tqdm(h5_files, desc="combining segmentations"):
 
     seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
     seg_soma_filtered = utils.path_to_filtered_seg(seg_soma_path, reg_stat_limits)
-    seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
     io.imsave(seg_soma_path, seg_soma_filtered)
 
     cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5"
