@@ -78,11 +78,13 @@ def read_seg_npy(path_npy):
     return image
 
 
-def convert_to_hdf5(id_to_path, hdf5_dir):
+def convert_to_hdf5(id_to_path, hdf5_dir, skip=False):
     hdf5_dir = Path(hdf5_dir)
     for image_id, image_paths in tqdm(id_to_path.items(), "converting to hdf5..."):
         images = read_ims(image_paths)
         channel_shape = images[0].shape
+        if skip:
+            break
         images = np.stack(images, axis=2)
         with h5py.File(hdf5_dir / f"{image_id}.h5", "a") as h5:
             h5.create_dataset(f"image", data=images)
