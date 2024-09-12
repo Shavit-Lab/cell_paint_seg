@@ -36,10 +36,9 @@ def test_get_id_to_path(make_im_channels):
 
 
 def test_combine_soma_nucleus_labels():
+    # nuclei are restricted to somas
     seg_soma = np.zeros((10, 10))
     seg_nuc = np.zeros((10, 10))
-
-    # nuclei are restricted to somas
     seg_soma[:3, :3] = 1
     seg_nuc[2:4, 2:4] = 1
     seg_nuc_filtered_true = np.zeros((10, 10))
@@ -47,9 +46,19 @@ def test_combine_soma_nucleus_labels():
     seg_nuc_filtered = utils.combine_soma_nucleus_labels(seg_soma, seg_nuc)
     assert np.array_equal(seg_nuc_filtered, seg_nuc_filtered_true)
 
-    # largest connected component is chosen as nucleus
-    seg_soma[:5, :5] = 1
+    # Nuclei have same label as surrounding soma
+    seg_soma = np.zeros((10, 10))
     seg_nuc = np.zeros((10, 10))
+    seg_soma[4, 4] = 2
+    seg_nuc[4, 4] = 1
+    seg_nuc_filtered_true = seg_soma.copy()
+    seg_nuc_filtered = utils.combine_soma_nucleus_labels(seg_soma, seg_nuc)
+    assert np.array_equal(seg_nuc_filtered, seg_nuc_filtered_true)
+
+    # largest connected component is chosen as nucleus
+    seg_soma = np.zeros((10, 10))
+    seg_nuc = np.zeros((10, 10))
+    seg_soma[:5, :5] = 1
     seg_nuc[:3, :3] = 1
     seg_nuc[4, 4] = 1
     seg_nuc_filtered_true = np.zeros((10, 10))
@@ -58,6 +67,8 @@ def test_combine_soma_nucleus_labels():
     assert np.array_equal(seg_nuc_filtered, seg_nuc_filtered_true)
 
     # multiple cells
+    seg_soma = np.zeros((10, 10))
+    seg_nuc = np.zeros((10, 10))
     seg_soma[:5, :5] = 1
     seg_soma[8:, 8:] = 2
     seg_nuc = np.zeros((10, 10))
@@ -115,3 +126,37 @@ def test_combine_soma_cell_labels():
     seg_cell_filtered_true[0, 5] = 3
     seg_cell_filtered = utils.combine_soma_cell_labels(seg_soma, seg_cell)
     assert np.array_equal(seg_cell_filtered, seg_cell_filtered_true)
+
+
+def test_get_id_from_name():
+    id = "012345678901"
+    assert utils.get_id_from_name_start(f"{id}junk") == id
+
+    id = "s012"
+    assert utils.get_id_from_name_96(f"junk_{id}junk") == id
+
+    assert utils.get_id_from_name_first_us(f"{id}_junk") == id
+    assert utils.get_id_from_name_first_hyph(f"{id}-junk") == id
+    assert utils.get_id_from_name_first_pd(f"{id}.junk") == id
+
+
+def test_check_valid_labels_comp():
+    seg = np.zeros((10, 10))
+
+    seg[0, 0] = 1
+    seg[5, 5] = 2
+    assert utils.check_valid_labels_comp(seg)
+
+    # majority is not background
+    with pytest.raises(Exception):
+        utils.check_valid_labels_comp(np.ones((10, 10)))
+
+    # labels not consecutive
+    seg[0, 0] = 0
+    with pytest.raises(Exception):
+        utils.check_valid_labels_comp(seg)
+
+    # one of the labels is not connected
+    seg[0, 0] = 1
+    seg[9, 9] = 1
+    assert utils.check_valid_labels_comp(seg) == False
