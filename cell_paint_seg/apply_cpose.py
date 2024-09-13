@@ -3,7 +3,7 @@ from tqdm import tqdm
 import os
 import sys
 from pathlib import Path
-from cell_paint_seg.utils import get_id_to_path, get_id_from_name_first_us
+from cell_paint_seg.utils import get_id_to_path, get_id_from_name_first_us, get_id_from_name_first_int
 
 models_dir_path = Path(os.path.realpath(__file__)).parents[1] / "models"
 
@@ -16,10 +16,10 @@ def apply_cpose(tif_dir, output_dir, nuclei=False):
     run_cpose(tif_dir, 1, 2, project="cyto3")
 
     id_to_path = get_id_to_path(
-        tif_dir, tag="masks.tif", id_from_name=get_id_from_name_first_us
+        tif_dir, tag="masks.tif", id_from_name=get_id_from_name_first_int
     )
     for id, path in tqdm(id_to_path.items()):
-        os.rename(path, output_dir / f"{id}-ch8sk1fk1fl1.tif")
+        os.rename(path, output_dir / f"{id}c8.tif")
 
     if nuclei:
         # nuclei

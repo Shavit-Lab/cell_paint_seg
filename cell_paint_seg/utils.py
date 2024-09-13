@@ -443,6 +443,10 @@ def get_id_from_name_first_pd(name):
     id = items[0]
     return id
 
+def get_id_from_name_first_int(name, idx=42): #3,4 - 42 
+    id = name[:idx]
+    return id
+
 
 def get_id_to_path(
     path_dir, tag=None, remote=False, id_from_name=get_id_from_name_start

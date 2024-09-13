@@ -7,6 +7,7 @@ from cell_paint_seg.utils import (
     get_id_to_path,
     get_id_from_name_first_hyph,
     get_id_from_name_first_pd,
+    get_id_from_name_first_int
 )
 
 
@@ -73,7 +74,7 @@ def apply_ilastik_obj_class(
     export_source = "Object Predictions"
 
     id_to_path_seg = get_id_to_path(
-        segmentation_path, tag=".h5", id_from_name=get_id_from_name_first_hyph
+        segmentation_path, tag=".h5", id_from_name=get_id_from_name_first_int
     )
 
     for h5_file in tqdm(h5_files, desc="executing object classification"):
