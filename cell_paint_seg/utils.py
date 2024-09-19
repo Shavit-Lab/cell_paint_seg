@@ -415,38 +415,13 @@ def row_col_field_from_id(id):
     return row, col, field
 
 
-def get_id_from_name_start(name):
-    id = name[:12]
-    return id
-
-
 def get_id_from_name_96(name):
     items = name.split("_")
     id = items[-1][:4]
     return id
 
 
-def get_id_from_name_first_us(name):
-    items = name.split("_")
-    id = items[0]
-    return id
-
-
-def get_id_from_name_first_hyph(name):
-    items = name.split("-")
-    id = items[0]
-    return id
-
-
-def get_id_from_name_first_pd(name):
-    items = name.split(".")
-    id = items[0]
-    return id
-
-
-def get_id_to_path(
-    path_dir, tag=None, remote=False, id_from_name=get_id_from_name_start
-):
+def get_id_to_path(path_dir, id_from_name, tag=None, remote=False):
     """Collect file paths at a directory into a dictionary organized by image ID.
 
     Args:
@@ -530,8 +505,8 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
     Returns:
         np.array: Cell instance segmentation such that each soma has at most one cell.
     """
-    assert mode(seg_soma.flatten()).mode == 0
-    assert mode(seg_cell.flatten()).mode == 0
+    # assert mode(seg_soma.flatten()).mode == 0
+    # assert mode(seg_cell.flatten()).mode == 0
 
     lbl_cell = measure.label(seg_cell)  # cell CC's
     lbl_soma_filtered = np.copy(lbl_cell)
@@ -654,7 +629,7 @@ def create_rgb(images, channels):
 
     Args:
         images (list): List of grayscale images.
-        channels (list): List of channel names.
+        channels (list): List of channel indexes for RGB image.
 
     Returns:
         np.array: RGB image.

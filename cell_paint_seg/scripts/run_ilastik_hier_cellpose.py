@@ -4,46 +4,69 @@ import h5py
 from PIL import Image
 import numpy as np
 from tqdm import tqdm
-import subprocess
 import time
-from skimage import io, measure, segmentation
+from skimage import io
 
 from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
 
 ###########Inputs###########
 
-parent_dir = "/Users/thomasathey/Documents/shavit-lab/fraenkel/96_well/exp2/train_set/"
+parent_dir = "C:\\Users\\zeiss\\projects\\athey_als\\test-images-96"  # 4: 8-14
 
-ilastik_path = (
-    "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
-)
+ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
 
 order = [-1, 0, 3, 2, 1, 4]
 
-#################################
+#############Default parameters####################
 models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
 
 cell_pxl_path = models_dir_path / "hier-cell-pxl.ilp"
 nuc_pxl_path = models_dir_path / "hier-nucleus-pxl.ilp"
 obj_class_path = models_dir_path / "celltype.ilp"
 
-# convert to hdf5
+
+def get_id_from_name(name):
+    id = name[:48]
+    return id
+
+
+# create subfolders if they don't exist
 parent_dir = Path(parent_dir)
-tif_path = parent_dir / "tifs"
-hdf5_path = parent_dir / "hdf5s"
-twochan_path = parent_dir / "twochannel_cpose"
-output_path = parent_dir / "segmentations"
+tif_path = parent_dir / "tifs"  # 4 - change number
+hdf5_path = parent_dir / "tommy" / "hdf5s"
+twochan_path = parent_dir / "tommy" / "twochannel_cpose"
+output_path = parent_dir / "tommy" / "segmentations"
 
 reg_stat_limits = {"area": (-1, 4000)}
 
+for path in [hdf5_path, twochan_path, output_path]:
+    dir_exists = os.path.exists(path)
+    if not dir_exists:
+        os.makedirs(path)
 
+#############Outputs###############
+# hdf5_path:
+#   - *.h5 - 6 channel images
+#   - *_Object Predictions.h5 - predictions of whether somas are alive are dead
+#   - *_Probabilities_cell.h5 - pixel predictions of whether pixels are part of a cell
+# twochan_oath:
+#   - *.tif - 2 channel images
+#   - *.npy - segmented objects from cellpsoe
+#   - *_cp_masks.tif - cellpose segmentation
+# output_path:
+#   - *.h5 - soma segmentation
+#   - *.tif - segmentation of objects with channels:
+#       - 7,10,13 - all,alive,dead cells respectively
+#       - 8,11,14 - all,alive,dead somas respectively
+#       - 9,12,15 - all,alive,dead nuclei respectively
+################################
+
+# convert to necessary formats
 time_start = time.time()
 
 # Convert to hdf5
-id_to_path = utils.get_id_to_path(
-    tif_path, tag=".tif", id_from_name=utils.get_id_from_name_96
-)
+id_to_path = utils.get_id_to_path(tif_path, tag=".tif", id_from_name=get_id_from_name)
 image_ids = list(id_to_path.keys())
 n_files = len(image_ids)
 n_channels = len(id_to_path[image_ids[0]])
@@ -77,7 +100,9 @@ time_pxl = time.time()
 blank_seg = np.zeros(im_shape, dtype="int32")
 blank_seg = Image.fromarray(blank_seg)
 
-apply_cpose.apply_cpose(twochan_path, output_path, nuclei=True)
+apply_cpose.apply_cpose(
+    twochan_path, output_path, id_from_name=get_id_from_name, nuclei=True
+)
 
 time_cp = time.time()
 
@@ -86,11 +111,14 @@ time_cp = time.time()
 for h5_file in tqdm(h5_files, desc="combining segmentations"):
     im_id = h5_file.stem
 
-    seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
+    seg_soma_path = output_path / f"{im_id}c8.tif"
     seg_soma_filtered = utils.path_to_filtered_seg(seg_soma_path, reg_stat_limits)
-    seg_soma_path = output_path / f"{im_id}-ch8sk1fk1fl1.tif"
+    seg_soma_path = output_path / f"{im_id}c8.tif"
     seg_soma_filtered = seg_soma_filtered.astype(np.uint32)
     io.imsave(seg_soma_path, seg_soma_filtered)
+    seg_soma_path_h5 = output_path / f"{im_id}c8.h5"
+    with h5py.File(seg_soma_path_h5, "a") as h5:
+        h5.create_dataset("segmentation", data=seg_soma_filtered)
 
     cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5"
     with h5py.File(cell_probs_path, "r") as f:
@@ -98,14 +126,14 @@ for h5_file in tqdm(h5_files, desc="combining segmentations"):
     seg_cell = (cell_probs[:, :, 1] > 0.5).astype(np.uint8)
     seg_cell[seg_soma_filtered > 0] = 1  # somas must be contained within cells
     seg_cell_instance = utils.combine_soma_cell_labels(seg_soma_filtered, seg_cell)
-    seg_cell_path = output_path / f"{im_id}-ch7sk1fk1fl1.tif"
+    seg_cell_path = output_path / f"{im_id}c7.tif"
     io.imsave(seg_cell_path, seg_cell_instance)
 
     nuc_probs_path = twochan_path / f"{im_id}_cp_masks.tif"
     nuc_probs = io.imread(nuc_probs_path)
     seg_nuc = (nuc_probs[:, :] > 0.5).astype(np.uint8)
     seg_nuc = utils.combine_soma_nucleus_labels(seg_soma_filtered, seg_nuc)
-    seg_nuc_path = output_path / f"{im_id}-ch9sk1fk1fl1.tif"
+    seg_nuc_path = output_path / f"{im_id}c9.tif"
     io.imsave(seg_nuc_path, seg_nuc)
 
 
@@ -113,16 +141,16 @@ time_combine = time.time()
 
 # Run Object Classification
 apply_ilastik.apply_ilastik_obj_class(
-    h5_files, output_path, ilastik_path, obj_class_path
+    h5_files, output_path, ilastik_path, obj_class_path, id_from_name=get_id_from_name
 )
 time_obj_class = time.time()
 
 # Filter alive/dead cells
 id_to_path_obj = utils.get_id_to_path(
-    hdf5_path, tag="Object", id_from_name=utils.get_id_from_name_first_us
+    hdf5_path, tag="Object", id_from_name=get_id_from_name
 )
 id_to_path_seg = utils.get_id_to_path(
-    output_path, tag=".tif", id_from_name=utils.get_id_from_name_first_hyph
+    output_path, tag=".tif", id_from_name=get_id_from_name
 )
 
 for id in id_to_path_seg.keys():
@@ -134,13 +162,13 @@ for id in id_to_path_seg.keys():
     # save alive somas
     seg_soma_class = np.copy(seg_soma)
     seg_soma_class[ctypes != 1] = 0
-    io.imsave(output_path / f"{id}-ch11sk1fk1fl1.tif", seg_soma_class)
+    io.imsave(output_path / f"{id}c11.tif", seg_soma_class)
     alive_ids = np.unique(seg_soma_class)
 
     # save dead somas
     seg_soma_class = np.copy(seg_soma)
     seg_soma_class[ctypes != 2] = 0
-    io.imsave(output_path / f"{id}-ch14sk1fk1fl1.tif", seg_soma_class)
+    io.imsave(output_path / f"{id}c14.tif", seg_soma_class)
     dead_ids = np.unique(seg_soma_class)
 
     for seg_channel in [0, 2]:
@@ -152,7 +180,7 @@ for id in id_to_path_seg.keys():
                 if lbl not in ctype_list:
                     seg_class[seg_class == lbl] = 0
             io.imsave(
-                output_path / f"{id}-ch{10+i_ctype*3+seg_channel}sk1fk1fl1.tif",
+                output_path / f"{id}c{10+i_ctype*3+seg_channel}.tif",
                 seg_class,
             )
 

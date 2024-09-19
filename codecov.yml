@@ -9,6 +9,9 @@
 coverage:
   status:
     patch: false
+    project: # add codecov check to enforce improving coverage
+      default:
+        target: auto # compares coverage to the previous base commit
 
   range: 70..90     # First number represents red, and second represents green
                     # (default is 70..100)
