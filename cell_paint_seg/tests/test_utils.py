@@ -20,13 +20,19 @@ def make_im_channels(tmp_path):
 
     io.imsave(im_channels_dir / "redherring.tiff", image)
 
-    return im_channels_dir, tag, image, ids
+    def get_id_from_name(name):
+        id = name.split("-")[0]
+        return id
+
+    return im_channels_dir, tag, image, ids, get_id_from_name
 
 
 def test_get_id_to_path(make_im_channels):
-    im_channels_dir, tag, image, ids = make_im_channels
+    im_channels_dir, tag, image, ids, get_id_from_name = make_im_channels
 
-    id_to_path = utils.get_id_to_path(im_channels_dir, tag)
+    id_to_path = utils.get_id_to_path(
+        im_channels_dir, id_from_name=get_id_from_name, tag=tag
+    )
 
     assert set(id_to_path.keys()) == set(ids)
 
@@ -129,15 +135,8 @@ def test_combine_soma_cell_labels():
 
 
 def test_get_id_from_name():
-    id = "012345678901"
-    assert utils.get_id_from_name_start(f"{id}junk") == id
-
     id = "s012"
     assert utils.get_id_from_name_96(f"junk_{id}junk") == id
-
-    assert utils.get_id_from_name_first_us(f"{id}_junk") == id
-    assert utils.get_id_from_name_first_hyph(f"{id}-junk") == id
-    assert utils.get_id_from_name_first_pd(f"{id}.junk") == id
 
 
 def test_check_valid_labels_comp():
@@ -160,3 +159,50 @@ def test_check_valid_labels_comp():
     seg[0, 0] = 1
     seg[9, 9] = 1
     assert utils.check_valid_labels_comp(seg) == False
+
+
+def test_create_rgb():
+    single_channel = np.stack([np.eye(10, 10) for i in range(3)], axis=-1)
+    # first 3 images are zeros, second have positives on the diagonals
+    images = [single_channel * 0 for i in range(3)] + [single_channel for i in range(3)]
+
+    channels = [0, 1, 2]
+    im_rgb_0 = utils.create_rgb(images, channels)
+    assert im_rgb_0.shape == (10, 10, 3)
+    assert im_rgb_0.dtype == np.float64
+    assert np.amax(im_rgb_0) <= 1.0
+    assert np.amin(im_rgb_0) >= 0.0
+
+    channels = [3, 4, 5]
+    im_rgb_1 = utils.create_rgb(images, channels)
+    assert im_rgb_1.shape == (10, 10, 3)
+    assert im_rgb_1.dtype == np.float64
+    assert np.amax(im_rgb_1) <= 1.0
+    assert np.amin(im_rgb_1) >= 0.0
+
+    with pytest.raises(Exception):
+        np.testing.assert_array_equal(im_rgb_0, im_rgb_1)
+
+
+def test_path_to_filtered_seg(tmp_path):
+    reg_stat_limits = {"area": [2, 15], "area_bbox": [-1, 15]}
+
+    seg = np.zeros((10, 10), dtype=np.uint16)
+    seg[:4, :4] = 1  # area too big
+    seg[5, 0] = 2  # area too small
+    seg[0, 5:7] = 3  # ok
+    # area_bbox too big
+    seg[6, 6:] = 4
+    seg[6:, 6] = 4
+    seg[6:, -1] = 4
+    seg[-1, 6:] = 4
+
+    path_seg = tmp_path / f"seg.tif"
+    io.imsave(path_seg, seg)
+
+    seg_filtered_true = np.zeros_like(seg)
+    seg_filtered_true[0, 5:7] = 1
+
+    seg_filtered = utils.path_to_filtered_seg(path_seg, reg_stat_limits)
+
+    np.testing.assert_array_equal(seg_filtered, seg_filtered_true)

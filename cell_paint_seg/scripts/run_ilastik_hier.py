@@ -21,6 +21,8 @@ ilastik_path = (
 
 order = [-1, 0, 3, 2, 1, 4]
 
+skip_conversion = True
+
 #################################
 models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
 
@@ -58,22 +60,22 @@ time_convert = time.time()
 files = os.listdir(hdf5_path)
 h5_files = [hdf5_path / f for f in files if ".h5" in f]
 
-for project in tqdm(
-    [bdry_pxl_path, cell_pxl_path, nuc_pxl_path],
-    desc="running pixel segmentation models...",
-):
-    apply_ilastik.apply_ilastik_images(h5_files, ilastik_path, project)
+# for project in tqdm(
+#     [bdry_pxl_path, cell_pxl_path, nuc_pxl_path],
+#     desc="running pixel segmentation models...",
+# ):
+#     apply_ilastik.apply_ilastik_images(h5_files, ilastik_path, project)
 
 time_pxl = time.time()
 
 
-# run headless multicut
-blank_seg = np.zeros(im_shape, dtype="int32")
-blank_seg = Image.fromarray(blank_seg)
+# # run headless multicut
+# blank_seg = np.zeros(im_shape, dtype="int32")
+# blank_seg = Image.fromarray(blank_seg)
 
-apply_ilastik.apply_ilastik_multicut(
-    h5_files, ilastik_path, multicut_path, output_path, blank_seg
-)
+# apply_ilastik.apply_ilastik_multicut(
+#     h5_files, ilastik_path, multicut_path, output_path, blank_seg
+# )
 
 time_cut = time.time()
 
