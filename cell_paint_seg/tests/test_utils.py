@@ -182,3 +182,27 @@ def test_create_rgb():
 
     with pytest.raises(Exception):
         np.testing.assert_array_equal(im_rgb_0, im_rgb_1)
+
+
+def test_path_to_filtered_seg(tmp_path):
+    reg_stat_limits = {"area": [2, 15], "area_bbox": [-1, 15]}
+
+    seg = np.zeros((10, 10), dtype=np.uint16)
+    seg[:4, :4] = 1  # area too big
+    seg[5, 0] = 2  # area too small
+    seg[0, 5:7] = 3  # ok
+    # area_bbox too big
+    seg[6, 6:] = 4
+    seg[6:, 6] = 4
+    seg[6:, -1] = 4
+    seg[-1, 6:] = 4
+
+    path_seg = tmp_path / f"seg.tif"
+    io.imsave(path_seg, seg)
+
+    seg_filtered_true = np.zeros_like(seg)
+    seg_filtered_true[0, 5:7] = 1
+
+    seg_filtered = utils.path_to_filtered_seg(path_seg, reg_stat_limits)
+
+    np.testing.assert_array_equal(seg_filtered, seg_filtered_true)
