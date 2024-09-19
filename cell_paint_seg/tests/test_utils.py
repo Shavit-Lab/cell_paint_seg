@@ -159,3 +159,26 @@ def test_check_valid_labels_comp():
     seg[0, 0] = 1
     seg[9, 9] = 1
     assert utils.check_valid_labels_comp(seg) == False
+
+
+def test_create_rgb():
+    single_channel = np.stack([np.eye(10, 10) for i in range(3)], axis=-1)
+    # first 3 images are zeros, second have positives on the diagonals
+    images = [single_channel * 0 for i in range(3)] + [single_channel for i in range(3)]
+
+    channels = [0, 1, 2]
+    im_rgb_0 = utils.create_rgb(images, channels)
+    assert im_rgb_0.shape == (10, 10, 3)
+    assert im_rgb_0.dtype == np.float64
+    assert np.amax(im_rgb_0) <= 1.0
+    assert np.amin(im_rgb_0) >= 0.0
+
+    channels = [3, 4, 5]
+    im_rgb_1 = utils.create_rgb(images, channels)
+    assert im_rgb_1.shape == (10, 10, 3)
+    assert im_rgb_1.dtype == np.float64
+    assert np.amax(im_rgb_1) <= 1.0
+    assert np.amin(im_rgb_1) >= 0.0
+
+    with pytest.raises(Exception):
+        np.testing.assert_array_equal(im_rgb_0, im_rgb_1)

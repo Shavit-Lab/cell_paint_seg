@@ -629,7 +629,7 @@ def create_rgb(images, channels):
 
     Args:
         images (list): List of grayscale images.
-        channels (list): List of channel names.
+        channels (list): List of channel indexes for RGB image.
 
     Returns:
         np.array: RGB image.
