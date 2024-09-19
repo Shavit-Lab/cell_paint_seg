@@ -443,7 +443,8 @@ def get_id_from_name_first_pd(name):
     id = items[0]
     return id
 
-def get_id_from_name_first_int(name, idx=42): #3,4 - 42 
+
+def get_id_from_name_first_int(name, idx=48):  # 3,4 - 42
     id = name[:idx]
     return id
 

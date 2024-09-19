@@ -13,11 +13,9 @@ from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
 ###########Inputs###########
 
-parent_dir = "D:\\David\\2024-08-14" # 4: 8-14
+parent_dir = "C:\\Users\\zeiss\\projects\\athey_als\\test-images-96"  # 4: 8-14
 
-ilastik_path = (
-    "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
-)
+ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
 
 order = [-1, 0, 3, 2, 1, 4]
 
@@ -30,7 +28,7 @@ obj_class_path = models_dir_path / "celltype.ilp"
 
 # create subfolders if they don't exist
 parent_dir = Path(parent_dir)
-tif_path = parent_dir / "Experiment4_DB_AD_unmixed_zprojection" / "Experiment4_DB_AD_unmixed_zprojection"  #4 - change number
+tif_path = parent_dir / "tifs"  # 4 - change number
 hdf5_path = parent_dir / "tommy" / "hdf5s"
 twochan_path = parent_dir / "tommy" / "twochannel_cpose"
 output_path = parent_dir / "tommy" / "segmentations"
@@ -53,7 +51,7 @@ for path in [hdf5_path, twochan_path, output_path]:
 #   - *_cp_masks.tif - cellpose segmentation
 # output_path:
 #   - *.h5 - soma segmentation
-#   - *.tif - segmentation of objects with channels: 
+#   - *.tif - segmentation of objects with channels:
 #       - 7,10,13 - all,alive,dead cells respectively
 #       - 8,11,14 - all,alive,dead somas respectively
 #       - 9,12,15 - all,alive,dead nuclei respectively
@@ -116,7 +114,6 @@ for h5_file in tqdm(h5_files, desc="combining segmentations"):
     seg_soma_path_h5 = output_path / f"{im_id}c8.h5"
     with h5py.File(seg_soma_path_h5, "a") as h5:
         h5.create_dataset("segmentation", data=seg_soma_filtered)
-
 
     cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5"
     with h5py.File(cell_probs_path, "r") as f:

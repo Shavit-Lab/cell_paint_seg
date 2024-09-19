@@ -7,7 +7,7 @@ from cell_paint_seg.utils import (
     get_id_to_path,
     get_id_from_name_first_hyph,
     get_id_from_name_first_pd,
-    get_id_from_name_first_int
+    get_id_from_name_first_int,
 )
 
 
