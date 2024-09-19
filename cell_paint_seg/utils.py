@@ -415,43 +415,13 @@ def row_col_field_from_id(id):
     return row, col, field
 
 
-def get_id_from_name_start(name):
-    id = name[:12]
-    return id
-
-
 def get_id_from_name_96(name):
     items = name.split("_")
     id = items[-1][:4]
     return id
 
 
-def get_id_from_name_first_us(name):
-    items = name.split("_")
-    id = items[0]
-    return id
-
-
-def get_id_from_name_first_hyph(name):
-    items = name.split("-")
-    id = items[0]
-    return id
-
-
-def get_id_from_name_first_pd(name):
-    items = name.split(".")
-    id = items[0]
-    return id
-
-
-def get_id_from_name_first_int(name, idx=48):  # 3,4 - 42
-    id = name[:idx]
-    return id
-
-
-def get_id_to_path(
-    path_dir, tag=None, remote=False, id_from_name=get_id_from_name_start
-):
+def get_id_to_path(path_dir, id_from_name, tag=None, remote=False):
     """Collect file paths at a directory into a dictionary organized by image ID.
 
     Args:

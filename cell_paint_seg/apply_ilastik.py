@@ -5,9 +5,6 @@ from skimage import io
 from pathlib import Path
 from cell_paint_seg.utils import (
     get_id_to_path,
-    get_id_from_name_first_hyph,
-    get_id_from_name_first_pd,
-    get_id_from_name_first_int,
 )
 
 
@@ -69,12 +66,16 @@ def apply_ilastik_multicut(
 
 
 def apply_ilastik_obj_class(
-    h5_files, segmentation_path, ilastik_path, multicut_project
+    h5_files,
+    segmentation_path,
+    ilastik_path,
+    multicut_project,
+    id_from_name,
 ):
     export_source = "Object Predictions"
 
     id_to_path_seg = get_id_to_path(
-        segmentation_path, tag=".h5", id_from_name=get_id_from_name_first_int
+        segmentation_path, tag=".h5", id_from_name=id_from_name
     )
 
     for h5_file in tqdm(h5_files, desc="executing object classification"):

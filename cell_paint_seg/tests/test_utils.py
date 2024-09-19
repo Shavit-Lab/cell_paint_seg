@@ -20,13 +20,19 @@ def make_im_channels(tmp_path):
 
     io.imsave(im_channels_dir / "redherring.tiff", image)
 
-    return im_channels_dir, tag, image, ids
+    def get_id_from_name(name):
+        id = name.split("-")[0]
+        return id
+
+    return im_channels_dir, tag, image, ids, get_id_from_name
 
 
 def test_get_id_to_path(make_im_channels):
-    im_channels_dir, tag, image, ids = make_im_channels
+    im_channels_dir, tag, image, ids, get_id_from_name = make_im_channels
 
-    id_to_path = utils.get_id_to_path(im_channels_dir, tag)
+    id_to_path = utils.get_id_to_path(
+        im_channels_dir, id_from_name=get_id_from_name, tag=tag
+    )
 
     assert set(id_to_path.keys()) == set(ids)
 
@@ -129,15 +135,8 @@ def test_combine_soma_cell_labels():
 
 
 def test_get_id_from_name():
-    id = "012345678901"
-    assert utils.get_id_from_name_start(f"{id}junk") == id
-
     id = "s012"
     assert utils.get_id_from_name_96(f"junk_{id}junk") == id
-
-    assert utils.get_id_from_name_first_us(f"{id}_junk") == id
-    assert utils.get_id_from_name_first_hyph(f"{id}-junk") == id
-    assert utils.get_id_from_name_first_pd(f"{id}.junk") == id
 
 
 def test_check_valid_labels_comp():

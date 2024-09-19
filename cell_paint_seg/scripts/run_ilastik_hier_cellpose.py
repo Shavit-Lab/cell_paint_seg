@@ -4,9 +4,8 @@ import h5py
 from PIL import Image
 import numpy as np
 from tqdm import tqdm
-import subprocess
 import time
-from skimage import io, measure, segmentation
+from skimage import io
 
 from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
@@ -25,6 +24,12 @@ models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
 cell_pxl_path = models_dir_path / "hier-cell-pxl.ilp"
 nuc_pxl_path = models_dir_path / "hier-nucleus-pxl.ilp"
 obj_class_path = models_dir_path / "celltype.ilp"
+
+
+def get_id_from_name(name):
+    id = name[:48]
+    return id
+
 
 # create subfolders if they don't exist
 parent_dir = Path(parent_dir)
@@ -61,9 +66,7 @@ for path in [hdf5_path, twochan_path, output_path]:
 time_start = time.time()
 
 # Convert to hdf5
-id_to_path = utils.get_id_to_path(
-    tif_path, tag=".tif", id_from_name=utils.get_id_from_name_first_int
-)
+id_to_path = utils.get_id_to_path(tif_path, tag=".tif", id_from_name=get_id_from_name)
 image_ids = list(id_to_path.keys())
 n_files = len(image_ids)
 n_channels = len(id_to_path[image_ids[0]])
@@ -97,7 +100,9 @@ time_pxl = time.time()
 blank_seg = np.zeros(im_shape, dtype="int32")
 blank_seg = Image.fromarray(blank_seg)
 
-apply_cpose.apply_cpose(twochan_path, output_path, nuclei=True)
+apply_cpose.apply_cpose(
+    twochan_path, output_path, id_from_name=get_id_from_name, nuclei=True
+)
 
 time_cp = time.time()
 
@@ -136,16 +141,16 @@ time_combine = time.time()
 
 # Run Object Classification
 apply_ilastik.apply_ilastik_obj_class(
-    h5_files, output_path, ilastik_path, obj_class_path
+    h5_files, output_path, ilastik_path, obj_class_path, id_from_name=get_id_from_name
 )
 time_obj_class = time.time()
 
 # Filter alive/dead cells
 id_to_path_obj = utils.get_id_to_path(
-    hdf5_path, tag="Object", id_from_name=utils.get_id_from_name_first_int
+    hdf5_path, tag="Object", id_from_name=get_id_from_name
 )
 id_to_path_seg = utils.get_id_to_path(
-    output_path, tag=".tif", id_from_name=utils.get_id_from_name_first_int
+    output_path, tag=".tif", id_from_name=get_id_from_name
 )
 
 for id in id_to_path_seg.keys():
