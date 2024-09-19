@@ -27,6 +27,7 @@ ignore:
   - "**/__init__.py"
   - "**/__version__.py"
   - "**/scripts"
+  - "setup.py"
 
 # Pull request comments:
 # ----------------------
