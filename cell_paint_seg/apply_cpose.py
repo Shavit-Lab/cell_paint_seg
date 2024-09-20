@@ -8,7 +8,7 @@ from cell_paint_seg.utils import get_id_to_path
 models_dir_path = Path(os.path.realpath(__file__)).parents[1] / "models"
 
 
-def apply_cpose(tif_dir, output_dir, id_from_name, nuclei=False):
+def apply_cpose(tif_dir, output_dir, id_from_name, nuclei=False, cell=False):
     tif_dir = Path(tif_dir)
     output_dir = Path(output_dir)
 
@@ -23,6 +23,19 @@ def apply_cpose(tif_dir, output_dir, id_from_name, nuclei=False):
         # nuclei
         path_nuclei_model = models_dir_path / "CP_20240911_083848_nuclei"
         run_cpose(tif_dir, 2, 0, project=path_nuclei_model)
+
+        id_to_path = get_id_to_path(tif_dir, tag="masks.tif", id_from_name=id_from_name)
+        for id, path in tqdm(id_to_path.items()):
+            os.rename(path, output_dir / f"{id}c9.tif")
+
+    if cell:
+        # nuclei
+        path_cell_model = models_dir_path / "CP_20240919_125916_cell"
+        run_cpose(tif_dir, 1, 2, project=path_cell_model)
+
+        id_to_path = get_id_to_path(tif_dir, tag="masks.tif", id_from_name=id_from_name)
+        for id, path in tqdm(id_to_path.items()):
+            os.rename(path, output_dir / f"{id}c7.tif")
 
 
 def run_cpose(tif_dir, fg_channel, bg_channel, project="cyto3"):

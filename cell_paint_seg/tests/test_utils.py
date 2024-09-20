@@ -206,3 +206,15 @@ def test_path_to_filtered_seg(tmp_path):
     seg_filtered = utils.path_to_filtered_seg(path_seg, reg_stat_limits)
 
     np.testing.assert_array_equal(seg_filtered, seg_filtered_true)
+
+
+def test_check_valid_labels():
+    seg_nuc = np.zeros((10, 10))
+    seg_soma = np.zeros((10, 10))
+    seg_cell = np.zeros((10, 10))
+
+    seg_cell[:3, :3] = 1
+    seg_soma[:2, :2] = 1
+    seg_nuc[:1, :1] = 1
+
+    utils.check_valid_labels(seg_nuc, seg_soma, seg_cell)

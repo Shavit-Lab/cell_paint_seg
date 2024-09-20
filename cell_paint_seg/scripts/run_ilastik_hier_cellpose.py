@@ -12,9 +12,13 @@ from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
 ###########Inputs###########
 
-parent_dir = "C:\\Users\\zeiss\\projects\\athey_als\\test-images-96"  # 4: 8-14
+parent_dir = (
+    "/Users/thomasathey/Documents/shavit-lab/fraenkel/96_well/exp2/train_set"  # 4: 8-14
+)
 
-ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
+ilastik_path = (
+    "/Applications/ilastik-1.4.0.post1-OSX.app/Contents/ilastik-release/run_ilastik.sh"
+)
 
 order = [-1, 0, 3, 2, 1, 4]
 
@@ -27,7 +31,7 @@ obj_class_path = models_dir_path / "celltype.ilp"
 
 
 def get_id_from_name(name):
-    id = name[:48]
+    id = name[:39]
     return id
 
 
@@ -87,12 +91,6 @@ time_convert = time.time()
 files = os.listdir(hdf5_path)
 h5_files = [hdf5_path / f for f in files if ".h5" in f]
 
-for project in tqdm(
-    [cell_pxl_path],
-    desc="running pixel segmentation models...",
-):
-    apply_ilastik.apply_ilastik_images(h5_files, ilastik_path, project)
-
 time_pxl = time.time()
 
 
@@ -101,7 +99,7 @@ blank_seg = np.zeros(im_shape, dtype="int32")
 blank_seg = Image.fromarray(blank_seg)
 
 apply_cpose.apply_cpose(
-    twochan_path, output_path, id_from_name=get_id_from_name, nuclei=True
+    twochan_path, output_path, id_from_name=get_id_from_name, nuclei=True, cell=True
 )
 
 time_cp = time.time()
@@ -120,16 +118,15 @@ for h5_file in tqdm(h5_files, desc="combining segmentations"):
     with h5py.File(seg_soma_path_h5, "a") as h5:
         h5.create_dataset("segmentation", data=seg_soma_filtered)
 
-    cell_probs_path = hdf5_path / f"{im_id}_Probabilities_cell.h5"
-    with h5py.File(cell_probs_path, "r") as f:
-        cell_probs = np.squeeze(f["exported_data"][()])
-    seg_cell = (cell_probs[:, :, 1] > 0.5).astype(np.uint8)
+    cell_probs_path = output_path / f"{im_id}c7.tif"
+    cell_probs = io.imread(cell_probs_path)
+    seg_cell = (cell_probs[:, :] > 0.5).astype(np.uint8)
     seg_cell[seg_soma_filtered > 0] = 1  # somas must be contained within cells
     seg_cell_instance = utils.combine_soma_cell_labels(seg_soma_filtered, seg_cell)
     seg_cell_path = output_path / f"{im_id}c7.tif"
     io.imsave(seg_cell_path, seg_cell_instance)
 
-    nuc_probs_path = twochan_path / f"{im_id}_cp_masks.tif"
+    nuc_probs_path = output_path / f"{im_id}c9.tif"
     nuc_probs = io.imread(nuc_probs_path)
     seg_nuc = (nuc_probs[:, :] > 0.5).astype(np.uint8)
     seg_nuc = utils.combine_soma_nucleus_labels(seg_soma_filtered, seg_nuc)
