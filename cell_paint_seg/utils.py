@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import paramiko
 from cell_paint_seg.image_io import read_ims, read_seg
+import warnings
 
 
 def eval_detections(
@@ -703,7 +704,7 @@ def check_valid_labels_pair(seg_small, seg_big):
 
 
 def check_valid_labels_comp(seg):
-    """Check if a nucleus segmentation has valid labels.
+    """Check if a an instance segmentation has valid labels.
     - The majority of pixels should be background.
     - All objects should be connected and have unique, consecutive labels.
 
@@ -722,9 +723,13 @@ def check_valid_labels_comp(seg):
         if id == 0:
             continue
 
-        single_nuc_seg = measure.label(seg == id)
+        single_comp_seg = measure.label(seg == id)
+        reg_props = measure.regionprops(single_comp_seg)
 
-        assert single_nuc_seg.max() == 1, f"multiple components with id {id}"
+        if single_comp_seg.max() != 1:
+            print(f"{single_comp_seg.max()} components with id {id} with centroids:")
+            for reg in reg_props:
+                print(reg.centroid)
 
 
 def create_rgb(images, channels):
@@ -841,10 +846,11 @@ def threat_score(seg_gt, seg_pred, iou_threshold):
     tps = 0
 
     for id_gt in gt_labels:
-        for id_pred in pred_labels:
+        pred_labels_id = np.unique(seg_pred[seg_gt == id_gt])
+        for id_pred in pred_labels_id:
             iou  = np.sum(np.logical_and(seg_gt == id_gt, seg_pred == id_pred)) / np.sum(np.logical_or(seg_gt == id_gt, seg_pred == id_pred))
             if iou >= iou_threshold:
                 tps += 1
                 break
 
-    return tps / (len(gt_labels) + len(pred_labels) - tps)
+    return tps, len(pred_labels) - tps, len(gt_labels) - tps
