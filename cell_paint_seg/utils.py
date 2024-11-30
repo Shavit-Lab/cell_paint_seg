@@ -675,11 +675,16 @@ def check_valid_labels(seg_nuc, seg_soma, seg_cell):
         seg_soma (np.array): soma instance segmentation
         seg_cell (np.array): cell instance segmentation
     """
+    print("**********Checking nuclei**********")
     check_valid_labels_comp(seg_nuc)
+    print("**********Checking somas**********")
     check_valid_labels_comp(seg_soma)
+    print("**********Checking cells**********")
     check_valid_labels_comp(seg_cell)
 
+    print("**********Checking nucleus-soma pair**********")
     check_valid_labels_pair(seg_nuc, seg_soma)
+    print("**********Checking soma-cell pair**********")
     check_valid_labels_pair(seg_soma, seg_cell)
 
 def check_valid_labels_pair(seg_small, seg_big):
