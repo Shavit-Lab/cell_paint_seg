@@ -421,6 +421,13 @@ def get_id_from_name_96(name):
     return id
 
 
+def get_id_from_name_trailing_c(name):
+    reversed = name[::-1]
+    idx = -1 * (reversed.index("c") + 1)
+    id = name[:idx]
+    return id
+
+
 def get_id_to_path(path_dir, id_from_name, tag=None, remote=False):
     """Collect file paths at a directory into a dictionary organized by image ID.
 
