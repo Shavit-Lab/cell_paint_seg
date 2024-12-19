@@ -41,6 +41,14 @@ def test_get_id_to_path(make_im_channels):
             assert f"ch{c+1}" in str(path)
 
 
+def test_get_id_from_name_trailing_c():
+    name = "Experiment 1 zprojection-Linear Unmixing-01_s001c1.tif"
+    assert (
+        utils.get_id_from_name_trailing_c(name)
+        == "Experiment 1 zprojection-Linear Unmixing-01_s001"
+    )
+
+
 def test_combine_soma_nucleus_labels():
     # nuclei are restricted to somas
     seg_soma = np.zeros((10, 10))

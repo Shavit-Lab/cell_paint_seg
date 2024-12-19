@@ -50,6 +50,7 @@ def main():
     parent_dir = Path(args.parent_dir)
     ilastik_path = args.ilastik_path
     order = [-1, 0, 3, 2, 1, 4]
+    get_id_from_name = utils.get_id_from_name_trailing_c
 
     no_cells_any = []
     no_cells_alive = []
@@ -198,11 +199,6 @@ def main():
     print(
         f"No alive cells detected in {len(no_cells_alive)}/{len(list(id_to_path_seg.keys()))} images: {no_cells_alive}"
     )
-
-
-def get_id_from_name(name):
-    id = name[:48]
-    return id
 
 
 def get_model_paths():
