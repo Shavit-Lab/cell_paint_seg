@@ -20,18 +20,16 @@ def make_im_channels(tmp_path):
 
     io.imsave(im_channels_dir / "redherring.tiff", image)
 
-    def get_id_from_name(name):
-        id = name.split("-")[0]
-        return id
+    id_from_name_nchar = len(id)
 
-    return im_channels_dir, tag, image, ids, get_id_from_name
+    return im_channels_dir, tag, image, ids, id_from_name_nchar
 
 
 def test_get_id_to_path(make_im_channels):
-    im_channels_dir, tag, image, ids, get_id_from_name = make_im_channels
+    im_channels_dir, tag, image, ids, id_from_name_nchar = make_im_channels
 
     id_to_path = utils.get_id_to_path(
-        im_channels_dir, id_from_name=get_id_from_name, tag=tag
+        im_channels_dir, id_from_name_nchar=id_from_name_nchar, tag=tag
     )
 
     assert set(id_to_path.keys()) == set(ids)
@@ -39,14 +37,6 @@ def test_get_id_to_path(make_im_channels):
     for paths in id_to_path.values():
         for c, path in enumerate(paths):
             assert f"ch{c+1}" in str(path)
-
-
-def test_get_id_from_name_trailing_c():
-    name = "Experiment 1 zprojection-Linear Unmixing-01_s001c1.tif"
-    assert (
-        utils.get_id_from_name_trailing_c(name)
-        == "Experiment 1 zprojection-Linear Unmixing-01_s001"
-    )
 
 
 def test_combine_soma_nucleus_labels():

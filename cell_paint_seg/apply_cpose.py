@@ -8,14 +8,16 @@ from cell_paint_seg.utils import get_id_to_path
 models_dir_path = Path(os.path.realpath(__file__)).parents[1] / "models"
 
 
-def apply_cpose(tif_dir, output_dir, id_from_name, nuclei=False):
+def apply_cpose(tif_dir, output_dir, id_from_name_nchar, nuclei=False):
     tif_dir = Path(tif_dir)
     output_dir = Path(output_dir)
 
     # somas
     run_cpose(tif_dir, 1, 2, project="cyto3")
 
-    id_to_path = get_id_to_path(tif_dir, tag="masks.tif", id_from_name=id_from_name)
+    id_to_path = get_id_to_path(
+        tif_dir, tag="masks.tif", id_from_name_nchar=id_from_name_nchar
+    )
     for id, path in tqdm(id_to_path.items()):
         os.rename(path, output_dir / f"{id}c8.tif")
 

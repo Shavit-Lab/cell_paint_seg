@@ -70,12 +70,12 @@ def apply_ilastik_obj_class(
     segmentation_path,
     ilastik_path,
     multicut_project,
-    id_from_name,
+    id_from_name_nchar,
 ):
     export_source = "Object Predictions"
 
     id_to_path_seg = get_id_to_path(
-        segmentation_path, tag=".h5", id_from_name=id_from_name
+        segmentation_path, tag=".h5", id_from_name_nchar=id_from_name_nchar
     )
 
     for h5_file in tqdm(h5_files, desc="executing object classification"):
