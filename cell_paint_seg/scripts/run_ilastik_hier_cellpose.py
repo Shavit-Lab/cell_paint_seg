@@ -12,7 +12,7 @@ from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
 ###########Inputs###########
 
-parent_dir = "C:\\Users\\zeiss\\projects\\athey_als\\test-images-96"  # 4: 8-14
+parent_dir = "D:\\David\\2024-11-05" #"C:\\Users\\zeiss\\projects\\athey_als\\test-images-96"  # 4: 8-14
 
 ilastik_path = "C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe"
 
@@ -27,7 +27,8 @@ obj_class_path = models_dir_path / "celltype.ilp"
 
 
 def get_id_from_name(name):
-    id = name[:48]
+    # must be indexed forward because it needs to work with various suffixes
+    id = name[:34]
     return id
 
 
@@ -39,6 +40,7 @@ twochan_path = parent_dir / "tommy" / "twochannel_cpose"
 output_path = parent_dir / "tommy" / "segmentations"
 
 reg_stat_limits = {"area": (-1, 4000)}
+
 
 for path in [hdf5_path, twochan_path, output_path]:
     dir_exists = os.path.exists(path)
@@ -85,7 +87,7 @@ time_convert = time.time()
 # run headless cell pixel classification
 
 files = os.listdir(hdf5_path)
-h5_files = [hdf5_path / f for f in files if ".h5" in f]
+h5_files = [hdf5_path / f for f in files if ".h5" in f and "Probabilities" not in f]
 
 for project in tqdm(
     [cell_pxl_path],
@@ -97,9 +99,6 @@ time_pxl = time.time()
 
 
 # run cellpose soma segmentation
-blank_seg = np.zeros(im_shape, dtype="int32")
-blank_seg = Image.fromarray(blank_seg)
-
 apply_cpose.apply_cpose(
     twochan_path, output_path, id_from_name=get_id_from_name, nuclei=True
 )
