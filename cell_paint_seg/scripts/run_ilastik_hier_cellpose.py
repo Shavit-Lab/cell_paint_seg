@@ -34,10 +34,14 @@ def main():
         description="Perform hierarchical segmentation on cell painting images"
     )
     parser.add_argument(
-        "--parent_dir",
+        "--tif_dir",
         type=str,
-        default="C:\\Users\\zeiss\\projects\\athey_als\\test-images-96",
         help="Path to parent directory",
+    )
+    parser.add_argument(
+        "--id_nchar",
+        type=int,
+        help="Number of characters that define the field of the image",
     )
     parser.add_argument(
         "--ilastik_path",
@@ -47,10 +51,11 @@ def main():
     )
     args = parser.parse_args()
 
-    parent_dir = Path(args.parent_dir)
+    tif_path = Path(args.tif_dir)
+    parent_dir = tif_path.parent
+    id_from_name_nchar = args.id_nchar
     ilastik_path = args.ilastik_path
     order = [-1, 0, 3, 2, 1, 4]
-    get_id_from_name = utils.get_id_from_name_trailing_c
 
     no_cells_any = []
     no_cells_alive = []
@@ -63,14 +68,14 @@ def main():
     cell_pxl_path, nuc_pxl_path, obj_class_path = get_model_paths()
 
     # create subfolders if they don't exist
-    tif_path, hdf5_path, twochan_path, output_path = get_create_subfolders(parent_dir)
+    hdf5_path, twochan_path, output_path = get_create_subfolders(parent_dir)
 
     reg_stat_limits = {"area": (-1, 4000)}
 
     time_start = time.time()
     # Convert to hdf5
     id_to_path = utils.get_id_to_path(
-        tif_path, tag=".tif", id_from_name=get_id_from_name
+        tif_path, tag=".tif", id_from_name_nchar=id_from_name_nchar
     )
     image_ids = list(id_to_path.keys())
     n_files = len(image_ids)
@@ -98,7 +103,7 @@ def main():
 
     # Cellpose soma segmentation
     apply_cpose.apply_cpose(
-        twochan_path, output_path, id_from_name=get_id_from_name, nuclei=True
+        twochan_path, output_path, id_from_name_nchar=id_from_name_nchar, nuclei=True
     )
     time_cp = time.time()
 
@@ -139,16 +144,16 @@ def main():
         output_path,
         ilastik_path,
         obj_class_path,
-        id_from_name=get_id_from_name,
+        id_from_name_nchar=id_from_name_nchar,
     )
     time_obj_class = time.time()
 
     # Filter alive/dead cells
     id_to_path_obj = utils.get_id_to_path(
-        hdf5_path, tag="Object", id_from_name=get_id_from_name
+        hdf5_path, tag="Object", id_from_name_nchar=id_from_name_nchar
     )
     id_to_path_seg = utils.get_id_to_path(
-        output_path, tag=".tif", id_from_name=get_id_from_name
+        output_path, tag=".tif", id_from_name_nchar=id_from_name_nchar
     )
 
     for id in id_to_path_seg.keys():
@@ -210,7 +215,6 @@ def get_model_paths():
 
 
 def get_create_subfolders(parent_dir):
-    tif_path = parent_dir / "tifs"  # 4 - change number
     hdf5_path = parent_dir / "tommy" / "hdf5s"
     twochan_path = parent_dir / "tommy" / "twochannel_cpose"
     output_path = parent_dir / "tommy" / "segmentations"
@@ -220,7 +224,7 @@ def get_create_subfolders(parent_dir):
         if not dir_exists:
             os.makedirs(path)
 
-    return tif_path, hdf5_path, twochan_path, output_path
+    return hdf5_path, twochan_path, output_path
 
 
 if __name__ == "__main__":
