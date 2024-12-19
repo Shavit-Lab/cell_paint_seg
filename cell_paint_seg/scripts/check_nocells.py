@@ -52,7 +52,7 @@ def main():
     )
 
     n_samples = len(list(id_to_path.keys()))
-    for id, paths in id_to_path.items():
+    for id, paths in tqdm(id_to_path.items()):
 
         ims = image_io.read_ims(paths)
 
@@ -71,7 +71,9 @@ def main():
 
 
 def get_id_from_name(name):
-    id = name[:48]
+    reversed = name[::-1]
+    idx = -1* (reversed.index("c")+1)
+    id = name[:idx]
     return id
 
 
