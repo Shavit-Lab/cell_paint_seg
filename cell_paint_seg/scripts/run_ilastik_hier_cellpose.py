@@ -45,17 +45,11 @@ def main():
         default="C:\\Program Files\\ilastik-1.4.0.post1\\ilastik.exe",
         help="Path to ilastik executable",
     )
-    parser.add_argument(
-        "--channel_order",
-        type=list,
-        default=[-1, 0, 3, 2, 1, 4],
-        help="Channel indexes for brightfield, ER, Actin, Mito, DNA, RNA",
-    )
     args = parser.parse_args()
 
     parent_dir = Path(args.parent_dir)
     ilastik_path = args.ilastik_path
-    order = args.channel_order
+    order = [-1, 0, 3, 2, 1, 4]
 
     no_cells_any = []
     no_cells_alive = []
@@ -102,9 +96,6 @@ def main():
     time_pxl = time.time()
 
     # Cellpose soma segmentation
-    blank_seg = np.zeros(im_shape, dtype="int32")
-    blank_seg = Image.fromarray(blank_seg)
-
     apply_cpose.apply_cpose(
         twochan_path, output_path, id_from_name=get_id_from_name, nuclei=True
     )
