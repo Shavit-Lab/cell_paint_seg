@@ -9,7 +9,7 @@ This repository has two main functions
 2. Code to deploy segmentation algorithms on image datasets. 
 
 
-Example Usage
-Activate virtual environment: `C:\Users\zeiss\projects\athey_als\venv_als_395\Scripts\activate`
-Move to directory: `cd C:\Users\zeiss\projects\athey_als\cell_paint_seg`
-Execute pipeline: `python .\cell_paint_seg\scripts\run_ilastik_hier_cellpose.py --tif_dir <path to directory of tifs> --id_nchar <number of leading chaaracters in tif files names that define the image field>`
+# Example Pipeline Usage
+Move to project: `cd C:\Users\zeiss\projects\athey_als\`
+Activate virtual environment: `venv_als_395\Scripts\activate`
+Execute pipeline: `python .\cell_paint_seg\cell_paint_seg\scripts\run_ilastik_hier_cellpose.py --tif_dir <path to directory of tifs> --id_nchar <number of leading chaaracters in tif files names that define the image field>`
