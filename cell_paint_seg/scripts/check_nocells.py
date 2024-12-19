@@ -42,6 +42,7 @@ def main():
     args = parser.parse_args()
 
     parent_dir = Path(args.parent_dir)
+    get_id_from_name = utils.get_id_from_name_trailing_c
 
     no_cells_any = []
     no_cells_alive = []
@@ -68,11 +69,6 @@ def main():
     print(
         f"No alive cells detected in {len(no_cells_alive)}/{n_samples} images: {no_cells_alive}"
     )
-
-
-def get_id_from_name(name):
-    id = name[:48]
-    return id
 
 
 def get_create_subfolders(parent_dir):
