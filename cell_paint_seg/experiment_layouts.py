@@ -31,21 +31,24 @@ def line_from_id(id):
     row = row_to_roid[row]
     col = int(well[2:])
 
+    # Control: AE8, ZKZ, XH7, ADK, NK3
+    # C9 ALS: RFT, TJV, DG9, EGM, LJX
+    # SOD1 ALS: BFU, KRC, RJV, ZLM, AF6
     if row < 2:
         if col < 7:
-            e_to_line = {1:"RFTiALS", 2:"AE8iCTR", 3:"ADKiCTR", 4:"EGMiALS"}
+            e_to_line = {1:"RFTiALS", 2:"AE8iCTR", 3:"ADKiCTR", 4:"EGMiALS", 5: "ZLMiALS", 6: "ZLMiALS"}
         else:
-            e_to_line = {1:"AE8iCTR", 2:"BFUiALS", 3:"ZLMiALS", 4:"XH7iCTR"}
+            e_to_line = {1:"AE8iCTR", 2:"BFUiALS", 3:"ZLMiALS", 4:"XH7iCTR", 5: "RFTiALS", 6: "RFTiALS"}
     elif row < 4:
         if col < 7:
-            e_to_line = {1:"ZKZiCTR", 2:"KRCiALS", 3:"BFUiALS", 4:"ADKiCTR"}
+            e_to_line = {1:"ZKZiCTR", 2:"KRCiALS", 3:"BFUiALS", 4:"ADKiCTR", 5: "EGMiALS", 6: "EGMiALS"}
         else:
-            e_to_line = {1:"TJViALS", 2:"XH7iCTR", 3:"NK3iCTR", 4:"LJXiALS"}
+            e_to_line = {1:"TJViALS", 2:"XH7iCTR", 3:"NK3iCTR", 4:"LJXiALS", 5: "RJViALS", 6: "RJViALS"}
     else:
         if col < 7:
-            e_to_line = {1:"DG9iALS", 2:"ZKZiCTR", 3:"ZKZiCTR", 4:"NK3iCTR"}
+            e_to_line = {1:"DG9iALS", 2:"ZKZiCTR", 3:"ZKZiCTR", 4:"NK3iCTR", 5: "BFUiALS", 6: "BFUiALS"}
         else:
-            e_to_line = {1:"XH7iCTR", 2:"RJViALS", 3:"AFGiALS", 4:"AE8iCTR"}
+            e_to_line = {1:"XH7iCTR", 2:"RJViALS", 3:"AFGiALS", 4:"AE8iCTR", 5: "DG9iALS", 6: "DG9iALS"}
     
     
     return e_to_line[e]
