@@ -643,6 +643,35 @@ def create_rgb(images, channels):
     return im_rgb
 
 
+def get_alive_dead_segs(seg_instance, seg_ctype, alive_idx=1, dead_idx=2):
+    alive_ids = []
+    dead_ids = []
+
+    for id in np.unique(seg_instance):
+        if id == 0:
+            continue
+        ctypes = seg_ctype[seg_instance == id]
+
+        # find if alive_idx or dead_idx is more common in ctypes
+        alive_count = np.sum(ctypes == alive_idx)
+        dead_count = np.sum(ctypes == dead_idx)
+
+        if alive_count >= dead_count:
+            alive_ids.append(id)
+        else:
+            dead_ids.append(id)
+
+    seg_soma_alive = np.zeros_like(seg_instance)
+    for id in alive_ids:
+        seg_soma_alive[seg_instance == id] = id
+
+    seg_soma_dead = np.zeros_like(seg_instance)
+    for id in dead_ids:
+        seg_soma_dead[seg_instance == id] = id
+
+    return seg_soma_alive, seg_soma_dead, alive_ids, dead_ids
+
+
 def label_celltype(
     path_dir_im,
     channels,

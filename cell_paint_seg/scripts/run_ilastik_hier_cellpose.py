@@ -7,6 +7,7 @@ from tqdm import tqdm
 import time
 from skimage import io
 import argparse
+import pandas as pd
 
 from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
@@ -156,25 +157,25 @@ def main():
         output_path, tag=".tif", id_from_name_nchar=id_from_name_nchar
     )
 
+    data_ids = []
+    data_alivecounts = []
+    data_deadcounts = []
+
     for id in id_to_path_seg.keys():
         with h5py.File(id_to_path_obj[id], "r") as f:
             ctypes = np.squeeze(f["exported_data"][()])
 
         seg_soma = io.imread(id_to_path_seg[id][1])
 
-        # save alive somas
-        seg_soma_class = np.copy(seg_soma)
-        seg_soma_class[ctypes != 1] = 0
-        if np.sum(seg_soma_class) == 0:
-            no_cells_alive.append(id)
-        io.imsave(output_path / f"{id}c11.tif", seg_soma_class)
-        alive_ids = np.unique(seg_soma_class)
+        seg_soma_alive, seg_soma_dead, alive_ids, dead_ids = utils.get_alive_dead_segs(
+            seg_soma, ctypes, alive_idx=1, dead_idx=2
+        )
 
-        # save dead somas
-        seg_soma_class = np.copy(seg_soma)
-        seg_soma_class[ctypes != 2] = 0
-        io.imsave(output_path / f"{id}c14.tif", seg_soma_class)
-        dead_ids = np.unique(seg_soma_class)
+        # save alive and dead somas
+        if len(alive_ids) == 0:
+            no_cells_alive.append(id)
+        io.imsave(output_path / f"{id}c11.tif", seg_soma_alive)
+        io.imsave(output_path / f"{id}c14.tif", seg_soma_dead)
 
         for seg_channel in [0, 2]:
             seg = io.imread(id_to_path_seg[id][seg_channel])
@@ -188,6 +189,20 @@ def main():
                     output_path / f"{id}c{10+i_ctype*3+seg_channel}.tif",
                     seg_class,
                 )
+
+        data_ids.append(id)
+        data_alivecounts.append(len(alive_ids))
+        data_deadcounts.append(len(dead_ids))
+
+    data = {
+        "id": data_ids,
+        "alive_count": data_alivecounts,
+        "dead_count": data_deadcounts,
+    }
+    df = pd.DataFrame(data)
+    path_counts = output_path.parents[0] / "cell_counts.csv"
+    df.to_csv(path_counts, index=False)
+
     time_filter_dead = time.time()
 
     print(
