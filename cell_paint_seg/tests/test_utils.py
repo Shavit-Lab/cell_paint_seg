@@ -182,6 +182,36 @@ def test_create_rgb():
         np.testing.assert_array_equal(im_rgb_0, im_rgb_1)
 
 
+def test_get_alive_dead_segs():
+    seg_instance = np.zeros((10, 10))
+    seg_instance[:4, :4] = 1
+    seg_instance[7, 7] = 2
+    seg_instance[5, 5] = 2
+    seg_instance[8:, 8:] = 3
+    seg_ctype = np.zeros((10, 10))
+    seg_ctype[:4, :4] = 1
+    seg_ctype[7, 7] = 1
+    seg_ctype[5, 5] = 2
+    seg_ctype[8:, 8:] = 2
+
+    seg_soma_alive, seg_soma_dead, alive_ids, dead_ids = utils.get_alive_dead_segs(
+        seg_instance, seg_ctype, alive_idx=1, dead_idx=2
+    )
+
+    assert set(alive_ids) == {1, 2}
+    assert set(dead_ids) == {3}
+
+    seg_soma_alive_true = np.zeros((10, 10))
+    seg_soma_alive_true[:4, :4] = 1
+    seg_soma_alive_true[5, 5] = 2
+    seg_soma_alive_true[7, 7] = 2
+    np.testing.assert_array_equal(seg_soma_alive, seg_soma_alive_true)
+
+    seg_soma_dead_true = np.zeros((10, 10))
+    seg_soma_dead_true[8:, 8:] = 3
+    np.testing.assert_array_equal(seg_soma_dead, seg_soma_dead_true)
+
+
 def test_path_to_filtered_seg(tmp_path):
     reg_stat_limits = {"area": [2, 15], "area_bbox": [-1, 15]}
 
