@@ -167,19 +167,15 @@ def main():
 
         seg_soma = io.imread(id_to_path_seg[id][1])
 
-        # save alive somas
-        seg_soma_class = np.copy(seg_soma)
-        seg_soma_class[ctypes != 1] = 0
-        if np.sum(seg_soma_class) == 0:
-            no_cells_alive.append(id)
-        io.imsave(output_path / f"{id}c11.tif", seg_soma_class)
-        alive_ids = np.unique(seg_soma_class)
+        seg_soma_alive, seg_soma_dead, alive_ids, dead_ids = utils.get_alive_dead_segs(
+            seg_soma, ctypes, alive_idx=1, dead_idx=2
+        )
 
-        # save dead somas
-        seg_soma_class = np.copy(seg_soma)
-        seg_soma_class[ctypes != 2] = 0
-        io.imsave(output_path / f"{id}c14.tif", seg_soma_class)
-        dead_ids = np.unique(seg_soma_class)
+        # save alive and dead somas
+        if len(alive_ids) == 0:
+            no_cells_alive.append(id)
+        io.imsave(output_path / f"{id}c11.tif", seg_soma_alive)
+        io.imsave(output_path / f"{id}c14.tif", seg_soma_dead)
 
         for seg_channel in [0, 2]:
             seg = io.imread(id_to_path_seg[id][seg_channel])
@@ -204,7 +200,7 @@ def main():
         "dead_count": data_deadcounts,
     }
     df = pd.DataFrame(data)
-    path_counts = output_path / "cell_counts.csv"
+    path_counts = output_path.parents[0] / "cell_counts.csv"
     df.to_csv(path_counts, index=False)
 
     time_filter_dead = time.time()
