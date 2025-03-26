@@ -859,3 +859,23 @@ def threat_score(seg_gt, seg_pred, iou_threshold):
                 break
 
     return tps, len(pred_labels) - tps, len(gt_labels) - tps
+
+
+def get_matches(seg1, seg2):
+    labels1 = np.unique(seg1)
+    labels2 = np.unique(seg2)
+
+    matches = []
+    for label1 in labels1:
+        if label1 == 0:
+            continue
+
+        for label2 in labels2:
+            if label2 == 0:
+                continue
+            iou = np.sum(np.logical_and(seg1 == label1, seg2 == label2)) / np.sum(np.logical_or(seg1 == label1, seg2 == label2))
+            if iou > 0.5:
+                matches.append((label1, label2))
+                break
+
+    return matches
