@@ -7,6 +7,7 @@ from tqdm import tqdm
 import time
 from skimage import io
 import argparse
+import pandas as pd
 
 from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
@@ -156,6 +157,10 @@ def main():
         output_path, tag=".tif", id_from_name_nchar=id_from_name_nchar
     )
 
+    data_ids = []
+    data_alivecounts = []
+    data_deadcounts = []
+
     for id in id_to_path_seg.keys():
         with h5py.File(id_to_path_obj[id], "r") as f:
             ctypes = np.squeeze(f["exported_data"][()])
@@ -188,6 +193,20 @@ def main():
                     output_path / f"{id}c{10+i_ctype*3+seg_channel}.tif",
                     seg_class,
                 )
+
+        data_ids.append(id)
+        data_alivecounts.append(len(alive_ids))
+        data_deadcounts.append(len(dead_ids))
+
+    data = {
+        "id": data_ids,
+        "alive_count": data_alivecounts,
+        "dead_count": data_deadcounts,
+    }
+    df = pd.DataFrame(data)
+    path_counts = output_path / "cell_counts.csv"
+    df.to_csv(path_counts, index=False)
+
     time_filter_dead = time.time()
 
     print(
