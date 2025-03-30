@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 import paramiko
 from cell_paint_seg.image_io import read_ims, read_seg
+import warnings
 
 
 def eval_detections(
@@ -492,7 +493,7 @@ def get_connection_details():
 
 
 def combine_soma_cell_labels(seg_soma, seg_cell):
-    """Modify a cell segmentation so it matches with a soma instance segmentation.
+    """Modify a cell semantic segmentation so it matches with a soma instance segmentation.
     Output satisfies:
     - Every cell pixel is connected to their soma
     - Every cell contains its soma
@@ -509,6 +510,7 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
     # assert mode(seg_cell.flatten()).mode == 0
 
     lbl_cell = measure.label(seg_cell)  # cell CC's
+
     lbl_soma_filtered = np.copy(lbl_cell)
     lbl_soma_filtered[seg_soma == 0] = 0  # intersection of soma and cell
 
@@ -534,7 +536,49 @@ def combine_soma_cell_labels(seg_soma, seg_cell):
     )
 
     return seg_cell_instance
+    
 
+
+def combine_small_big_labels_instance(seg_small, seg_big):
+    """Modify big object instance segmentation so it matches with small object instance segmentation.
+    There must be a clear 1-to-1 mapping between big and small objects.
+
+    Output satisfies:
+    - Every small object pixel is a cell pixel
+    - The big and small labels match
+
+    Args:
+        seg_small (np.array): Small object instance segmentation.
+        seg_big (np.array): Big object instance segmentation. 1-to-1 mapping between cells and somas.
+    """
+    matches, unmatched_soma, unmatched_cell = match_small_to_big(seg_small, seg_big)
+    assert len(unmatched_soma) == 0, "Some small objects do not have big objects"
+    assert len(unmatched_cell) == 0, "Some big objects do not have small objects"
+
+    seg_big_filtered = np.zeros_like(seg_big)
+    for match in matches:
+        if match[0] == 0:
+            continue
+        seg_big_filtered[seg_big == match[1]] = match[0]
+    for match in matches:
+        if match[0] == 0:
+            continue
+        seg_big_filtered[seg_small == match[0]] = match[0]
+
+    # only take largest CC
+    for big_id in np.unique(seg_big_filtered):
+        if big_id == 0:
+            continue
+
+        single_obj = measure.label(seg_big_filtered == big_id)
+        if single_obj.max() > 1:
+            largestCC = (
+                single_obj == np.argmax(np.bincount(single_obj.flat)[1:]) + 1
+            )
+            mask = np.logical_and(largestCC == 0, seg_big_filtered == big_id)
+            seg_big_filtered[mask] = 0
+
+    return seg_big_filtered
 
 def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     """Modify a nucleus segmentation so it matches with a soma instance segmentation.
@@ -542,6 +586,11 @@ def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     - Nuclei fall within soma
     - Nuclei have same label as surrounding soma
     - There is at most one (connected) nuclei per soma
+
+    It does this by:
+    - Removing nuclei that do not fall within soma
+    - For each soma, removing all but the largest nucleus
+
 
     Args:
         seg_soma (np.array): Soma instance segmentation.
@@ -571,6 +620,48 @@ def combine_soma_nucleus_labels(seg_soma, seg_nuc):
     return seg_nuc_filtered
 
 
+def match_small_to_big(seg_small, seg_big):
+    small_ids = np.unique(seg_small)
+    big_ids = np.unique(seg_big)
+
+    assert len(small_ids) == np.amax(seg_small)+1, "Nucleus IDs are not consecutive"
+    assert len(big_ids) == np.amax(seg_big)+1, "Soma IDs are not consecutive"
+
+    assert mode(seg_small.flatten()).mode == 0, "Nucleus segmentation does not have background of 0"
+    assert mode(seg_big.flatten()).mode == 0, "Soma segmentation does not have background of 0"
+
+    small_to_big = np.zeros((len(small_ids), len(big_ids)))
+
+    for small_id in small_ids:
+        area_nuc = np.sum(seg_small == small_id)
+        big_lbls = seg_big[seg_small == small_id]
+
+        for big_lbl in np.unique(big_lbls):
+            if big_lbl == 0:
+                continue
+            area_soma = np.sum(big_lbls == big_lbl)
+
+            if area_soma / area_nuc > 0.5:
+                small_to_big[small_id, big_lbl] = 1
+                break
+    # force background match
+    small_to_big[:,0] = 0
+    small_to_big[0,:] = 0
+    small_to_big[0,0] = 1
+
+    matches = []
+    for small_id, row in enumerate(small_to_big):
+        if np.sum(row) == 1:
+            big_id = np.argmax(row)
+            if np.sum(small_to_big[:, big_id]) == 1:
+                matches.append((small_id, big_id))
+            
+    unmatched_small = np.where(np.sum(small_to_big, axis=1) != 1)[0]
+    unmatched_big = np.where(np.sum(small_to_big, axis=0) != 1)[0]
+
+    return matches, unmatched_small, unmatched_big
+
+
 def check_valid_labels(seg_nuc, seg_soma, seg_cell):
     """Check if the soma, nucleus, and cell segmentations have valid labels.
     - For each compartment, the majority of pixels should be background.
@@ -584,44 +675,66 @@ def check_valid_labels(seg_nuc, seg_soma, seg_cell):
         seg_soma (np.array): soma instance segmentation
         seg_cell (np.array): cell instance segmentation
     """
-    assert check_valid_labels_comp(seg_nuc)
-    assert check_valid_labels_comp(seg_soma)
-    assert check_valid_labels_comp(seg_cell)
+    print("**********Checking nuclei**********")
+    check_valid_labels_comp(seg_nuc)
+    print("**********Checking somas**********")
+    check_valid_labels_comp(seg_soma)
+    print("**********Checking cells**********")
+    check_valid_labels_comp(seg_cell)
 
-    label_match = seg_cell[seg_soma > 0] == seg_soma[seg_soma > 0]
+    print("**********Checking nucleus-soma pair**********")
+    check_valid_labels_pair(seg_nuc, seg_soma)
+    print("**********Checking soma-cell pair**********")
+    check_valid_labels_pair(seg_soma, seg_cell)
+
+def check_valid_labels_pair(seg_small, seg_big):
+    """Check if two instance segmentation have valid labels.
+    - Small objects should be contained within big objects of the same label
+
+    Args:
+        seg_small (np.array): Small object instance segmentation.
+        seg_big (np.array): Big object instance segmentation.
+
+    Raises:
+        AssertionError: If labels are not a valid pair.
+    """
+
+    label_match = seg_small[seg_small > 0] == seg_big[seg_small > 0]
     if not label_match.all():
         mismatches = np.where(label_match == False)
-        print(seg_soma[seg_soma > 0][mismatches])
+        print(seg_small[seg_small > 0][mismatches])
         print("-------------->>>>>>>>>>>")
-        print(seg_cell[seg_soma > 0][mismatches])
-        raise AssertionError(f"Soma and cell labels do not match")
-
-    assert (seg_soma[seg_nuc > 0] == seg_nuc[seg_nuc > 0]).all()
+        print(seg_big[seg_small > 0][mismatches])
+        raise AssertionError(f"Small and big labels do not match")
 
 
 def check_valid_labels_comp(seg):
-    """Check if a nucleus segmentation has valid labels.
+    """Check if a an instance segmentation has valid labels.
+    - The majority of pixels should be background.
+    - All objects should be connected and have unique, consecutive labels.
 
     Args:
         seg (np.array): Instance segmentation.
 
     Returns:
-        bool: True if the majority is background and all objects are connected and have unique, consecutive labels.
+        bool: True if the conditions above are met to make the labels valid.
     """
     assert mode(seg.flatten()).mode == 0
 
     unq = np.unique(seg)
     assert len(unq) == np.amax(seg) + 1
 
-    for soma_id in unq:
-        if soma_id == 0:
+    for id in unq:
+        if id == 0:
             continue
 
-        single_nuc_seg = measure.label(seg == soma_id)
-        if single_nuc_seg.max() > 1:
-            return False
+        single_comp_seg = measure.label(seg == id)
+        reg_props = measure.regionprops(single_comp_seg)
 
-    return True
+        if single_comp_seg.max() != 1:
+            print(f"{single_comp_seg.max()} components with id {id} with centroids:")
+            for reg in reg_props:
+                print(reg.centroid)
 
 
 def create_rgb(images, channels):
@@ -757,3 +870,41 @@ def label_celltype(
     # # Save collected responses
     # with open(out_dir / f"all_data.pickle", "wb") as handle:
     #     pickle.dump(all_data, handle)
+
+def threat_score(seg_gt, seg_pred, iou_threshold):
+    assert iou_threshold >= 0.5 and iou_threshold <= 1.0
+
+    gt_labels = np.unique(seg_gt[seg_gt > 0])
+    pred_labels = np.unique(seg_pred[seg_pred > 0])
+
+    tps = 0
+
+    for id_gt in gt_labels:
+        pred_labels_id = np.unique(seg_pred[seg_gt == id_gt])
+        for id_pred in pred_labels_id:
+            iou  = np.sum(np.logical_and(seg_gt == id_gt, seg_pred == id_pred)) / np.sum(np.logical_or(seg_gt == id_gt, seg_pred == id_pred))
+            if iou >= iou_threshold:
+                tps += 1
+                break
+
+    return tps, len(pred_labels) - tps, len(gt_labels) - tps
+
+
+def get_matches(seg1, seg2):
+    labels1 = np.unique(seg1)
+    labels2 = np.unique(seg2)
+
+    matches = []
+    for label1 in labels1:
+        if label1 == 0:
+            continue
+
+        for label2 in labels2:
+            if label2 == 0:
+                continue
+            iou = np.sum(np.logical_and(seg1 == label1, seg2 == label2)) / np.sum(np.logical_or(seg1 == label1, seg2 == label2))
+            if iou > 0.5:
+                matches.append((label1, label2))
+                break
+
+    return matches
