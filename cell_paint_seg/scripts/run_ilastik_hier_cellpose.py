@@ -52,11 +52,12 @@ def main():
     )
     args = parser.parse_args()
 
+    # Channel indices that correspond to brightfield, ER, AGP, Mito, DNA, RNA.
+    order = [-1, 0, 2, -1, 1, 3]
     tif_path = Path(args.tif_dir)
     parent_dir = tif_path.parent
     id_from_name_nchar = args.id_nchar
     ilastik_path = args.ilastik_path
-    order = [-1, 0, 3, 2, 1, 4]
 
     no_cells_any = []
     no_cells_alive = []
