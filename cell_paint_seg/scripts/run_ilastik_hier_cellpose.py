@@ -23,7 +23,7 @@ models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
 
 cell_pxl_path = models_dir_path / "hier-cell-pxl.ilp"
 nuc_pxl_path = models_dir_path / "hier-nucleus-pxl.ilp"
-obj_class_path = models_dir_path / "celltype.ilp"
+obj_class_path = models_dir_path / "celltype_14_06_2025.ilp"
 
 
 def get_id_from_name(name):
