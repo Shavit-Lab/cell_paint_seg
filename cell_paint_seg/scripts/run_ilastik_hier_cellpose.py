@@ -168,7 +168,7 @@ def main():
         seg_soma = io.imread(id_to_path_seg[id][1])
 
         seg_soma_alive, seg_soma_dead, alive_ids, dead_ids = utils.get_alive_dead_segs(
-            seg_soma, ctypes, alive_idx=1, dead_idx=2
+            seg_soma, ctypes, alive_idx=2, dead_idx=1
         )
 
         # save alive and dead somas
@@ -225,7 +225,7 @@ def get_model_paths():
     models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
     cell_pxl_path = models_dir_path / "hier-cell-pxl.ilp"
     nuc_pxl_path = models_dir_path / "hier-nucleus-pxl.ilp"
-    obj_class_path = models_dir_path / "celltype.ilp"
+    obj_class_path = models_dir_path / "celltype_nucexp_2025_07_29.ilp"
     return cell_pxl_path, nuc_pxl_path, obj_class_path
 
 
