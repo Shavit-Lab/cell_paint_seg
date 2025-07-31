@@ -11,6 +11,7 @@ import pandas as pd
 
 from cell_paint_seg import utils, apply_ilastik, apply_cpose, image_io
 
+# python cell_paint_seg/scripts/run_ilastik_hier_cellpose.py --tif_dir /Users/thomasathey/Documents/shavit-lab/fraenkel/data/aneesh/2025_04_nuc-stains/tifs_for_seg --id_nchar 15 --ilastik_path /Applications/ilastik-1.4.0-OSX.app/Contents/MacOS/ilastik
 
 #############Outputs###############
 # hdf5_path:
@@ -226,7 +227,7 @@ def get_model_paths():
     models_dir_path = Path(os.path.realpath(__file__)).parents[2] / "models"
     cell_pxl_path = models_dir_path / "hier-cell-pxl.ilp"
     nuc_pxl_path = models_dir_path / "hier-nucleus-pxl.ilp"
-    obj_class_path = models_dir_path / "celltype_14_06_2025.ilp"
+    obj_class_path = models_dir_path / "celltype_nucexp_2025_07_29.ilp"
     return cell_pxl_path, nuc_pxl_path, obj_class_path
 
 
